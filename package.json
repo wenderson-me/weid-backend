@@ -1,0 +1,23 @@
+{
+  "name": "weid-backend",
+  "version": "1.0.0",
+  "description": "Weid Management System Backend API",
+  "main": "dist/app.js",
+  "scripts": {
+    "start": "node dist/app.js",
+    "dev": "nodemon src/app.ts",
+    "build": "tsc",
+    "lint": "eslint . --ext .ts",
+    "test": "jest"
+  },
+  "keywords": [
+    "task",
+    "management",
+    "kanban",
+    "express",
+    "mongodb",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC"
+}
