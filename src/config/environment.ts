@@ -18,6 +18,12 @@ interface EnvironmentConfig {
   LOG_FILE: string;
   RATE_LIMIT_WINDOW_MS: number;
   RATE_LIMIT_MAX: number;
+
+  // Google Drive API config
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
+  GOOGLE_REDIRECT_URI: string;
+  GOOGLE_API_SCOPES: string;
 }
 
 // Configuração do ambiente com valores padrão
@@ -26,7 +32,7 @@ const config: EnvironmentConfig = {
   PORT: parseInt(process.env.PORT || '5000'),
   API_PREFIX: process.env.API_PREFIX || '/api/v1',
   MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/weid',
-  JWT_SECRET: process.env.JWT_SECRET || 'default_development_secret_key_replace_in_production',
+  JWT_SECRET: process.env.JWT_SECRET || 'super-secret-jwt-key-change-in-production',
   JWT_ACCESS_EXPIRATION: process.env.JWT_ACCESS_EXPIRATION || '1h',
   JWT_REFRESH_EXPIRATION: process.env.JWT_REFRESH_EXPIRATION || '7d',
   JWT_RESET_PASSWORD_EXPIRATION: process.env.JWT_RESET_PASSWORD_EXPIRATION || '10m',
@@ -35,29 +41,30 @@ const config: EnvironmentConfig = {
   LOG_FILE: process.env.LOG_FILE || 'logs/app.log',
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '15000', 10),
   RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+
+  // Google Drive API config
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
+  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/v1/drive/callback',
+  GOOGLE_API_SCOPES: process.env.GOOGLE_API_SCOPES || 'https://www.googleapis.com/auth/drive.readonly,https://www.googleapis.com/auth/drive.metadata.readonly'
 };
 
 // Validação básica de configurações críticas
 if (config.NODE_ENV === 'production') {
-  const requiredEnvVars = [
+  const missingVars = [
     'MONGODB_URI',
     'JWT_SECRET',
-    'CORS_ORIGIN',
-  ];
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET'
+  ].filter(key => !process.env[key]);
 
-  const missingEnvVars = requiredEnvVars.filter(
-    (envVar) => !process.env[envVar]
-  );
-
-  if (missingEnvVars.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missingEnvVars.join(', ')}`
-    );
+  if (missingVars.length > 0) {
+    throw new Error(`Variáveis de ambiente obrigatórias não definidas: ${missingVars.join(', ')}`);
   }
 
   // Verifica se o JWT_SECRET foi alterado do valor padrão em produção
-  if (config.JWT_SECRET === 'default_development_secret_key_replace_in_production') {
-    throw new Error('JWT_SECRET must be changed from default value in production mode');
+  if (config.JWT_SECRET === 'super-secret-jwt-key-change-in-production') {
+    throw new Error('JWT_SECRET deve ser alterado em produção');
   }
 }
 

@@ -16,7 +16,8 @@ import userRoutes from './routes/user.routes';
 import taskRoutes from './routes/task.routes';
 import commentRoutes from './routes/comment.routes';
 import activityRoutes from './routes/activity.routes';
-import noteRoutes from './routes/note.routes'; // Adicionar importação das rotas de notas
+import noteRoutes from './routes/note.routes';
+import driveRoutes from './routes/drive.routes';
 
 // Inicialização do app Express
 const app = express();
@@ -57,6 +58,7 @@ app.use(`${apiPrefix}/tasks`, taskRoutes);
 app.use(`${apiPrefix}/comments`, commentRoutes);
 app.use(`${apiPrefix}/activities`, activityRoutes);
 app.use(`${apiPrefix}/notes`, noteRoutes);
+app.use(`${apiPrefix}/drive`, driveRoutes);
 
 // Rota para verificar o estado da API
 app.get(`${apiPrefix}/health`, (req: Request, res: Response) => {
