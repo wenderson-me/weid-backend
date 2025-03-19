@@ -46,7 +46,8 @@ class DriveController {
       const { code, state } = req.query;
 
       if (!code || !state) {
-        return unauthorizedResponse(res, 'Parâmetros de autenticação inválidos ou ausentes');
+        // Se não há código ou estado, redirecionar para o frontend com erro
+        return res.redirect(`${config.CORS_ORIGIN}/drive/callback?error=missing_params`);
       }
 
       // Verificar e decodificar o state parameter para obter o userId
@@ -55,57 +56,35 @@ class DriveController {
         const decoded = jwt.verify(state.toString(), config.JWT_SECRET) as { userId: string };
         userId = decoded.userId;
       } catch (error) {
-        return unauthorizedResponse(res, 'Token de estado inválido ou expirado');
+        // Token de estado inválido, redirecionar para o frontend com erro
+        return res.redirect(`${config.CORS_ORIGIN}/drive/callback?error=invalid_state`);
       }
 
+      // Processar o código de autorização
       await driveService.handleAuthCallback(code.toString(), userId);
 
-      // Redirecionar para uma página de sucesso
-      return res.send(`
-        <html>
-          <head>
-            <title>Conexão com Google Drive</title>
-            <style>
-              body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-              .success { color: #4CAF50; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1 class="success">Conexão Estabelecida!</h1>
-              <p>Sua conta do Google Drive foi conectada com sucesso.</p>
-              <p>Você pode fechar esta janela e retornar ao aplicativo.</p>
-            </div>
-          </body>
-        </html>
-      `);
+      // Gerar um token de confirmação para o frontend
+      const confirmationToken = jwt.sign(
+        {
+          userId,
+          driveConnected: true,
+          timestamp: Date.now()
+        },
+        config.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+
+      // Redirecionar para o frontend com token de sucesso
+      return res.redirect(`${config.CORS_ORIGIN}/drive/callback?token=${confirmationToken}`);
     } catch (error) {
-      // Em caso de erro, mostrar uma página de erro ao invés de JSON
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      return res.status(500).send(`
-        <html>
-          <head>
-            <title>Erro na Conexão</title>
-            <style>
-              body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-              .error { color: #f44336; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1 class="error">Erro na Conexão</h1>
-              <p>Não foi possível conectar ao Google Drive:</p>
-              <p>${errorMessage}</p>
-              <p>Por favor, tente novamente.</p>
-            </div>
-          </body>
-        </html>
-      `);
+      // Em caso de erro, redirecionar para o frontend com mensagem de erro
+      const errorMessage = error instanceof Error ?
+        encodeURIComponent(error.message) :
+        'unknown_error';
+
+      return res.redirect(`${config.CORS_ORIGIN}/drive/callback?error=${errorMessage}`);
     }
   }
-
   /**
    * Lista arquivos do Google Drive do usuário
    * @route GET /api/v1/drive/files
