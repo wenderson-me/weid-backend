@@ -970,7 +970,7 @@ export const setupSwagger = (app: Express): void => {
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
     explorer: true,
     customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'API Weihu - Documentação',
+    customSiteTitle: 'API Weid - Documentação',
   }));
 };
 

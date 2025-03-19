@@ -21,7 +21,7 @@ const logFormat = winston.format.combine(
 const logger = winston.createLogger({
   level: config.LOG_LEVEL,
   format: logFormat,
-  defaultMeta: { service: 'weihu-api' },
+  defaultMeta: { service: 'weid-api' },
   transports: [
     // Escreve todos os logs com nível `error` ou abaixo em `error.log`
     new winston.transports.File({
