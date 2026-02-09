@@ -7,7 +7,12 @@ interface EnvironmentConfig {
   NODE_ENV: string;
   PORT: number;
   API_PREFIX: string;
-  MONGODB_URI: string;
+  POSTGRES_HOST: string;
+  POSTGRES_PORT: number;
+  POSTGRES_USER: string;
+  POSTGRES_PASSWORD: string;
+  POSTGRES_DB: string;
+  POSTGRES_SSL: boolean;
   JWT_SECRET: string;
   JWT_ACCESS_EXPIRATION: string;
   JWT_REFRESH_EXPIRATION: string;
@@ -23,7 +28,12 @@ const config: EnvironmentConfig = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: parseInt(process.env.PORT || '5000'),
   API_PREFIX: process.env.API_PREFIX || '/api/v1',
-  MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/weid',
+  POSTGRES_HOST: process.env.POSTGRES_HOST || 'localhost',
+  POSTGRES_PORT: parseInt(process.env.POSTGRES_PORT || '5432'),
+  POSTGRES_USER: process.env.POSTGRES_USER || 'postgres',
+  POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD || 'postgres',
+  POSTGRES_DB: process.env.POSTGRES_DB || 'weid_db',
+  POSTGRES_SSL: process.env.POSTGRES_SSL === 'true',
   JWT_SECRET: process.env.JWT_SECRET || 'default_development_secret_key',
   JWT_ACCESS_EXPIRATION: process.env.JWT_ACCESS_EXPIRATION || '1h',
   JWT_REFRESH_EXPIRATION: process.env.JWT_REFRESH_EXPIRATION || '7d',
@@ -37,9 +47,12 @@ const config: EnvironmentConfig = {
 
 if (config.NODE_ENV === 'production') {
   const requiredEnvVars = [
-    'MONGODB_URI',
     'JWT_SECRET',
     'CORS_ORIGIN',
+    'POSTGRES_HOST',
+    'POSTGRES_USER',
+    'POSTGRES_PASSWORD',
+    'POSTGRES_DB',
   ];
 
   const missingEnvVars = requiredEnvVars.filter(

@@ -1,59 +1,70 @@
-import mongoose from 'mongoose';
+import { Sequelize } from 'sequelize';
 import config from './environment';
 import logger from './logger';
 
-const mongoOptions: mongoose.ConnectOptions = {
-};
+let sequelize: Sequelize;
 
-const connectDB = async (): Promise<void> => {
+const connectPostgreSQL = async (): Promise<Sequelize> => {
   try {
-    const conn = await mongoose.connect(config.MONGODB_URI, mongoOptions);
-    const { host, port, name } = conn.connection;
-    logger.info(`MongoDB Connected: ${host}:${port}/${name}`);
+    sequelize = new Sequelize({
+      host: config.POSTGRES_HOST,
+      port: config.POSTGRES_PORT,
+      database: config.POSTGRES_DB,
+      username: config.POSTGRES_USER,
+      password: config.POSTGRES_PASSWORD,
+      dialect: 'postgres',
+      logging: config.NODE_ENV === 'development' ? (msg) => logger.debug(msg) : false,
+      pool: {
+        max: 10,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      },
+      dialectOptions: config.POSTGRES_SSL ? {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      } : {}
+    });
+
+    await sequelize.authenticate();
+    logger.info(`PostgreSQL Connected: ${config.POSTGRES_HOST}:${config.POSTGRES_PORT}/${config.POSTGRES_DB}`);
+
+    return sequelize;
   } catch (error) {
     const err = error as Error;
-    logger.error(`Error connecting to MongoDB: ${err.message}`);
+    logger.error(`Error connecting to PostgreSQL: ${err.message}`);
     process.exit(1);
   }
 };
 
-const setupConnectionHandlers = () => {
-  mongoose.connection.on('connected', () => {
-    logger.info('Mongoose connected to database');
-  });
+export const connectDB = async (): Promise<void> => {
+  logger.info('🐘 Initializing PostgreSQL connection...');
+  await connectPostgreSQL();
+};
 
-  mongoose.connection.on('error', (err) => {
-    logger.error(`Mongoose connection error: ${err.message}`);
-
-    if (err.name === 'MongoServerSelectionError') {
-      logger.error('Fatal MongoDB Error. Exiting application.');
-      process.exit(1);
-    }
-  });
-
-  mongoose.connection.on('disconnected', () => {
-    logger.warn('Mongoose disconnected. Attempting to reconnect...');
-  });
-
-  mongoose.connection.on('reconnected', () => {
-    logger.info('Mongoose reconnected successfully');
-  });
+export const getSequelize = (): Sequelize => {
+  if (!sequelize) {
+    throw new Error('Sequelize not initialized. Call connectDB() first.');
+  }
+  return sequelize;
 };
 
 export const closeDB = async (): Promise<void> => {
   try {
-    await mongoose.connection.close();
-    logger.info('Mongoose connection closed');
+    if (sequelize) {
+      await sequelize.close();
+      logger.info('PostgreSQL connection closed');
+    }
   } catch (error) {
-    logger.error(`Error closing MongoDB connection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    logger.error(`Error closing database connection: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
-setupConnectionHandlers();
-
 process.on('SIGINT', async () => {
-  await mongoose.connection.close();
-  logger.info('Mongoose connection closed due to app termination');
+  await closeDB();
+  logger.info('Database connection closed due to app termination');
   process.exit(0);
 });
 

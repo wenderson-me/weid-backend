@@ -6,7 +6,7 @@
 ## Pré-requisitos
 
 - Node.js (v14 ou superior)
-- MongoDB (v4.4 ou superior)
+- PostgreSQL (v12 ou superior)
 - npm (v7 ou superior)
 
 ## Instalação
@@ -15,21 +15,35 @@
 	```bash
 	npm install
 	```
+
 2. Configure as variáveis de ambiente:
-	- Copie `.env.example` para `.env` e ajuste os valores:
-	  - String de conexão MongoDB
-	  - Chaves secretas JWT
-	  - Porta da API
+	- Copie `.env.example` para `.env` e ajuste os valores
+
+3. Inicializar o banco:
+	```bash
+	npm run db:setup
+	```
+
+4. Teste a conexão:
+	```bash
+	npm run db:test
+	```
 
 ## Desenvolvimento
 
 Para rodar o backend em modo desenvolvimento:
 
 ```bash
+npm start
+```
+
+## Deploy
+
+```bash
 npm run dev
 ```
 
-Acesse a API em `http://localhost:3000`.
+Acesse a API: `http://localhost:3000`.
 
 ## Build para Produção
 
@@ -37,17 +51,9 @@ Acesse a API em `http://localhost:3000`.
 npm run build
 ```
 
-## Funcionalidades
-
-- 📋 Gerenciamento de tarefas com quadros kanban
-- 📝 Criação e organização de notas
-- 📊 Registro e acompanhamento de atividades
-- 👥 Autenticação e autorização de usuários
-- 🔔 Notificações em tempo real
-
 ## Documentação da API
 
-Acesse `/api-docs` com o backend rodando para consultar a documentação Swagger.
+Acesse `/api-docs` com o backend em execução para consultar a documentação Swagger.
 
 ## Testes
 

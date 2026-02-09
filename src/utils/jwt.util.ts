@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import config from '../config/environment';
-import { IUser } from '../models/user.model';
+import  User from '../models/user.pg.model';
 import { UserTokens } from '../types/user.types';
 
 /**
@@ -8,10 +8,10 @@ import { UserTokens } from '../types/user.types';
  * @param user Usuário para o qual gerar o token
  * @returns Token JWT assinado
  */
-export const generateAccessToken = (user: IUser): string => {
+export const generateAccessToken = (user: User): string => {
   return jwt.sign(
     {
-      id: user._id,
+      id: user.id,
       email: user.email,
       role: user.role,
     },
@@ -24,10 +24,10 @@ export const generateAccessToken = (user: IUser): string => {
  * @param user Usuário para o qual gerar o token
  * @returns Token JWT assinado
  */
-export const generateRefreshToken = (user: IUser): string => {
+export const generateRefreshToken = (user: User): string => {
   return jwt.sign(
     {
-      id: user._id,
+      id: user.id,
     },
     config.JWT_SECRET
   );
@@ -38,7 +38,7 @@ export const generateRefreshToken = (user: IUser): string => {
  * @param user Usuário para o qual gerar os tokens
  * @returns Objeto contendo ambos os tokens
  */
-export const generateTokens = (user: IUser): UserTokens => {
+export const generateTokens = (user: User): UserTokens => {
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user)
 
@@ -67,10 +67,10 @@ export const verifyToken = (token: string): jwt.JwtPayload | null => {
  * @param user Usuário para o qual gerar o token
  * @returns Token JWT assinado
  */
-export const generatePasswordResetToken = (user: IUser): string => {
+export const generatePasswordResetToken = (user: User): string => {
   return jwt.sign(
     {
-      id: user._id,
+      id: user.id,
       version: user.password.substring(0, 10),
     },
     config.JWT_SECRET,

@@ -1,12 +1,13 @@
 import { Request } from 'express';
-import { Document, Types } from 'mongoose';
+// import { Document, Types } from 'mongoose';
 
 export enum UserRole {
   ADMIN = 'admin',
   USER = 'user',
 }
 
-export interface IUser extends Document {
+export interface IUser {
+  id?: string;
   name: string;
   email: string;
   password: string;
@@ -139,9 +140,4 @@ export interface ISuccessResponse<T = any> {
   message: string;
   data?: T;
   [key: string]: any;
-}
-
-export interface IUserModel extends Document {
-  findByEmailWithPassword: (email: string) => Promise<IUser | null>;
-  findByRefreshToken: (refreshToken: string) => Promise<IUser | null>;
 }

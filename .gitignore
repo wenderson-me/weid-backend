@@ -9,13 +9,12 @@ node_modules
 .env.development.local
 .env.test.local
 .env.production.local
+.sql
 
 # Build directories
 /build
 /dist
 /backend/dist
-/frontend/dist
-/frontend/build
 
 # Logs
 logs
@@ -47,9 +46,6 @@ lerna-debug.log*
 # Temporary files
 .tmp
 .temp
-
-# MongoDB data directory
-/data
 
 # Uploads
 /backend/uploads

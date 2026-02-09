@@ -1,6 +1,6 @@
-import mongoose, { Schema, Types } from 'mongoose';
-import { IComment } from '../models/comment.model';
-import { IUser } from '../models/user.model';
+// import mongoose, { Schema, Types } from 'mongoose';
+// import { IComment } from '../models/comment.model';
+// import { IUser } from '../models/user.model';
 import { sanitizeUser, UserResponse } from './user.types';
 
 export interface CreateCommentInput {
@@ -33,7 +33,7 @@ export interface CommentResponse {
   task: string;
   author: UserResponse;
   attachments: string[];
-  likes: mongoose.Types.ObjectId | IUser
+  likes: string[] | UserResponse[]
   isEdited: boolean;
   parentComment?: string;
   replies?: CommentResponse[];
@@ -49,6 +49,8 @@ export interface CommentsWithPagination {
   pages: number;
 }
 
+// TODO: Reimplementar após migração completa para PostgreSQL
+/*
 export const sanitizeComment = (comment: IComment, includeReplies = false): CommentResponse => {
   const sanitizedComment: any = {
     _id: comment._id.toString(),
@@ -85,3 +87,4 @@ export const sanitizeComment = (comment: IComment, includeReplies = false): Comm
 
   return sanitizedComment;
 };
+*/

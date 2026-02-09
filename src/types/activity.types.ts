@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { ActivityType, IActivity } from '../models/activity.model';
-import { IUser } from '../models/user.model';
+import User from '../models/user.pg.model';
 import { sanitizeUser, UserResponse } from './user.types';
 
 export interface CreateActivityInput {
@@ -66,14 +66,14 @@ export const sanitizeActivity = (activity: IActivity): ActivityResponse => {
   if (activity.user instanceof mongoose.Types.ObjectId) {
     sanitizedActivity.user = activity.user.toString();
   } else {
-    sanitizedActivity.user = sanitizeUser(activity.user as IUser);
+    sanitizedActivity.user = sanitizeUser(activity.user as User);
   }
 
   if (activity.targetUser) {
     if (activity.targetUser instanceof mongoose.Types.ObjectId) {
       sanitizedActivity.targetUser = activity.targetUser.toString();
     } else {
-      sanitizedActivity.targetUser = sanitizeUser(activity.targetUser as IUser);
+      sanitizedActivity.targetUser = sanitizeUser(activity.targetUser as User);
     }
   }
 
