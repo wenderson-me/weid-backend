@@ -21,6 +21,9 @@ import notificationRoutes from './routes/notification.routes';
 
 const app = express();
 
+// Configurar trust proxy para aplicações atrás de proxy reverso (Nginx)
+app.set('trust proxy', 1);
+
 const limiter = rateLimit({
   windowMs: config.RATE_LIMIT_WINDOW_MS,
   max: config.RATE_LIMIT_MAX,
