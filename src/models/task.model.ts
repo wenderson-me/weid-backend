@@ -32,26 +32,26 @@ interface TaskCreationAttributes extends Optional<TaskAttributes,
 > {}
 
 class Task extends Model<TaskAttributes, TaskCreationAttributes> implements TaskAttributes {
-  public id!: string;
-  public title!: string;
-  public description?: string;
-  public status!: TaskStatus;
-  public priority!: TaskPriority;
-  public dueDate?: Date;
-  public estimatedHours?: number;
-  public ownerId!: string;
-  public assignees!: string[];
-  public tags!: string[];
-  public attachments?: string[];
-  public color?: string;
-  public isArchived!: boolean;
-  public progress!: number;
-  public position!: number;
-  public createdById!: string;
-  public updatedById?: string;
+  declare public id: string;
+  declare public title: string;
+  declare public description: string | undefined;
+  declare public status: TaskStatus;
+  declare public priority: TaskPriority;
+  declare public dueDate: Date | undefined;
+  declare public estimatedHours: number | undefined;
+  declare public ownerId: string;
+  declare public assignees: string[];
+  declare public tags: string[];
+  declare public attachments: string[] | undefined;
+  declare public color: string | undefined;
+  declare public isArchived: boolean;
+  declare public progress: number;
+  declare public position: number;
+  declare public createdById: string;
+  declare public updatedById: string | undefined;
 
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  declare public readonly createdAt: Date;
+  declare public readonly updatedAt: Date;
 }
 
 export const initTaskModel = () => {

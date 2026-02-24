@@ -52,6 +52,29 @@ class AuthController {
   }
 
   /**
+   * Retorna os dados do usuário autenticado
+   * @route GET /api/v1/auth/me
+   */
+  public async getCurrentUser(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+    try {
+      const user = {
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role,
+        avatar: req.user.avatar,
+        isActive: req.user.isActive,
+        isVerified: req.user.isVerified,
+        lastLogin: req.user.lastLogin,
+        preferences: req.user.preferences,
+      };
+      return successResponse(res, user, 'Dados do usuário recuperados com sucesso');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Altera a senha do usuário logado
    * @route POST /api/v1/auth/change-password
    */

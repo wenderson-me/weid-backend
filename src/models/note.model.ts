@@ -23,19 +23,19 @@ interface NoteCreationAttributes extends Optional<NoteAttributes,
 > {}
 
 class Note extends Model<NoteAttributes, NoteCreationAttributes> implements NoteAttributes {
-  public id!: string;
-  public title!: string;
-  public content!: string;
-  public ownerId!: string;
-  public category!: NoteCategory;
-  public color?: string;
-  public isPinned!: boolean;
-  public tags!: string[];
-  public createdById!: string;
-  public updatedById?: string;
+  declare public id: string;
+  declare public title: string;
+  declare public content: string;
+  declare public ownerId: string;
+  declare public category: NoteCategory;
+  declare public color: string | undefined;
+  declare public isPinned: boolean;
+  declare public tags: string[];
+  declare public createdById: string;
+  declare public updatedById: string | undefined;
 
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  declare public readonly createdAt: Date;
+  declare public readonly updatedAt: Date;
 }
 
 export const initNoteModel = () => {

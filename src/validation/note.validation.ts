@@ -55,7 +55,7 @@ export const updateNoteSchema = Joi.object({
 });
 
 export const getNoteSchema = Joi.object({
-  id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+  id: Joi.string().uuid().required().messages({
     'string.base': 'ID deve ser um texto',
     'string.empty': 'ID é obrigatório',
     'string.pattern.base': 'Por favor, forneça um ID válido',
@@ -64,7 +64,7 @@ export const getNoteSchema = Joi.object({
 });
 
 export const deleteNoteSchema = Joi.object({
-  id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+  id: Joi.string().uuid().required().messages({
     'string.base': 'ID deve ser um texto',
     'string.empty': 'ID é obrigatório',
     'string.pattern.base': 'Por favor, forneça um ID válido',
@@ -73,7 +73,7 @@ export const deleteNoteSchema = Joi.object({
 });
 
 export const queryNotesSchema = Joi.object({
-  owner: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
+  owner: Joi.string().uuid().optional(),
   category: Joi.alternatives().try(
     Joi.string().valid('general', 'personal', 'work', 'important', 'idea'),
     Joi.array().items(

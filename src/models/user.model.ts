@@ -37,23 +37,23 @@ interface UserCreationAttributes extends Optional<UserAttributes,
 > {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
-  public id!: string;
-  public name!: string;
-  public email!: string;
-  public password!: string;
-  public avatar?: string;
-  public role!: 'user' | 'admin' | 'manager';
-  public isActive!: boolean;
-  public isVerified!: boolean;
-  public verificationToken?: string;
-  public lastLogin?: Date;
-  public passwordChangedAt?: Date;
-  public resetPasswordToken?: string;
-  public resetPasswordExpires?: Date;
-  public preferences?: UserPreferences;
+  declare public id: string;
+  declare public name: string;
+  declare public email: string;
+  declare public password: string;
+  declare public avatar: string | undefined;
+  declare public role: 'user' | 'admin' | 'manager';
+  declare public isActive: boolean;
+  declare public isVerified: boolean;
+  declare public verificationToken: string | undefined;
+  declare public lastLogin: Date | undefined;
+  declare public passwordChangedAt: Date | undefined;
+  declare public resetPasswordToken: string | undefined;
+  declare public resetPasswordExpires: Date | undefined;
+  declare public preferences: UserPreferences | undefined;
 
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  declare public readonly createdAt: Date;
+  declare public readonly updatedAt: Date;
 
   public async comparePassword(candidatePassword: string): Promise<boolean> {
     return await bcrypt.compare(candidatePassword, this.password);

@@ -19,17 +19,17 @@ interface CommentCreationAttributes extends Optional<CommentAttributes,
 > {}
 
 class Comment extends Model<CommentAttributes, CommentCreationAttributes> implements CommentAttributes {
-  public id!: string;
-  public content!: string;
-  public taskId!: string;
-  public authorId!: string;
-  public attachments?: string[];
-  public likes!: string[];
-  public isEdited!: boolean;
-  public parentCommentId?: string;
+  declare public id: string;
+  declare public content: string;
+  declare public taskId: string;
+  declare public authorId: string;
+  declare public attachments: string[] | undefined;
+  declare public likes: string[];
+  declare public isEdited: boolean;
+  declare public parentCommentId: string | undefined;
 
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  declare public readonly createdAt: Date;
+  declare public readonly updatedAt: Date;
 }
 
 export const initCommentModel = () => {

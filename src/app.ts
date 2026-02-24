@@ -96,6 +96,9 @@ const startServer = async () => {
   }
 };
 
-startServer();
+// Não iniciar servidor automaticamente em ambiente de teste
+if (config.NODE_ENV !== 'test') {
+  startServer();
+}
 
 export default app;

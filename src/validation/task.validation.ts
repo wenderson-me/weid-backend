@@ -33,7 +33,7 @@ export const createTaskSchema = Joi.object({
     'number.min': 'Horas estimadas não pode ser negativo',
   }),
   assignees: Joi.array().items(
-    Joi.string().regex(/^[0-9a-fA-F]{24}$/).messages({
+    Joi.string().uuid().messages({
       'string.pattern.base': 'ID de usuário inválido',
     })
   ).optional(),
@@ -75,7 +75,7 @@ export const updateTaskSchema = Joi.object({
     'number.min': 'Horas estimadas não pode ser negativo',
   }),
   assignees: Joi.array().items(
-    Joi.string().regex(/^[0-9a-fA-F]{24}$/).messages({
+    Joi.string().uuid().messages({
       'string.pattern.base': 'ID de usuário inválido',
     })
   ).optional(),
@@ -94,7 +94,7 @@ export const updateTaskSchema = Joi.object({
 });
 
 export const getTaskSchema = Joi.object({
-  id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+  id: Joi.string().uuid().required().messages({
     'string.base': 'ID deve ser um texto',
     'string.empty': 'ID é obrigatório',
     'string.pattern.base': 'Por favor, forneça um ID válido',
@@ -103,7 +103,7 @@ export const getTaskSchema = Joi.object({
 });
 
 export const deleteTaskSchema = Joi.object({
-  id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+  id: Joi.string().uuid().required().messages({
     'string.base': 'ID deve ser um texto',
     'string.empty': 'ID é obrigatório',
     'string.pattern.base': 'Por favor, forneça um ID válido',
@@ -124,8 +124,8 @@ export const queryTasksSchema = Joi.object({
       Joi.string().valid(TASK_PRIORITY.LOW, TASK_PRIORITY.MEDIUM, TASK_PRIORITY.HIGH, TASK_PRIORITY.URGENT)
     )
   ).optional(),
-  owner: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
-  assignee: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
+  owner: Joi.string().uuid().optional(),
+  assignee: Joi.string().uuid().optional(),
   search: Joi.string().optional(),
   tags: Joi.alternatives().try(
     Joi.string(),

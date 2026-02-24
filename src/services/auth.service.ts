@@ -29,18 +29,30 @@ class AuthService {
       throw new AppError(MESSAGES.VALIDATION.EMAIL_EXISTS, 409);
     }
 
+    // Criar usuário
     const user = await User.create(userData);
 
+    // Gerar tokens
     const tokens = generateTokens(user);
 
+    // Atualizar último login
     user.lastLogin = new Date();
     await user.save();
 
-    await Activity.create({
-      type: ACTIVITY_TYPES.PROFILE_UPDATED,
-      userId: user.id,
-      targetUserId: user.id,
-      description: 'Conta de usuário criada',
+    // Criar registro de atividade em background (não bloqueia o registro)
+    // Usando setImmediate para não bloquear o fluxo principal
+    setImmediate(async () => {
+      try {
+        await Activity.create({
+          type: ACTIVITY_TYPES.PROFILE_UPDATED,
+          userId: user.id,
+          targetUserId: user.id,
+          description: 'Conta de usuário criada',
+        });
+      } catch (error) {
+        // Log do erro mas não falha o registro
+        console.error('Erro ao criar atividade de registro:', error);
+      }
     });
 
     return {

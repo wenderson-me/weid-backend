@@ -52,19 +52,19 @@ export const updateUserSchema = Joi.object({
 });
 
 export const getUserSchema = Joi.object({
-  id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+  id: Joi.string().uuid().required().messages({
     'string.base': 'ID deve ser um texto',
     'string.empty': 'ID é obrigatório',
-    'string.pattern.base': 'Por favor, forneça um ID válido',
+    'string.guid': 'Por favor, forneça um ID válido',
     'any.required': 'ID é obrigatório',
   }),
 });
 
 export const deleteUserSchema = Joi.object({
-  id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+  id: Joi.string().uuid().required().messages({
     'string.base': 'ID deve ser um texto',
     'string.empty': 'ID é obrigatório',
-    'string.pattern.base': 'Por favor, forneça um ID válido',
+    'string.guid': 'Por favor, forneça um ID válido',
     'any.required': 'ID é obrigatório',
   }),
 });

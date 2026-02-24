@@ -20,6 +20,7 @@ router.post('/refresh-token', validate(refreshTokenSchema), authController.refre
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
 router.post('/reset-password', authLimiter, validate(resetPasswordSchema), authController.resetPassword);
 
+router.get('/me', authenticate, authController.getCurrentUser);
 router.post('/change-password', authenticate, validate(changePasswordSchema), authController.changePassword);
 router.post('/logout', authenticate, authController.logout);
 

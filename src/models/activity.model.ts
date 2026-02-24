@@ -42,16 +42,16 @@ interface ActivityCreationAttributes extends Optional<ActivityAttributes,
 > {}
 
 class Activity extends Model<ActivityAttributes, ActivityCreationAttributes> implements ActivityAttributes {
-  public id!: string;
-  public type!: ActivityType;
-  public taskId?: string;
-  public noteId?: string;
-  public userId!: string;
-  public targetUserId?: string;
-  public description!: string;
-  public metadata?: Record<string, any>;
+  declare public id: string;
+  declare public type: ActivityType;
+  declare public taskId: string | undefined;
+  declare public noteId: string | undefined;
+  declare public userId: string;
+  declare public targetUserId: string | undefined;
+  declare public description: string;
+  declare public metadata: Record<string, any> | undefined;
 
-  public readonly createdAt!: Date;
+  declare public readonly createdAt: Date;
 }
 
 export const initActivityModel = () => {

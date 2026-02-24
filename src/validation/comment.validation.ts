@@ -6,7 +6,7 @@ export const createCommentSchema = Joi.object({
     'string.empty': 'Conteúdo é obrigatório',
     'any.required': 'Conteúdo é obrigatório',
   }),
-  task: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+  task: Joi.string().uuid().required().messages({
     'string.base': 'ID da tarefa deve ser um texto',
     'string.empty': 'ID da tarefa é obrigatório',
     'string.pattern.base': 'Por favor, forneça um ID de tarefa válido',
@@ -17,7 +17,7 @@ export const createCommentSchema = Joi.object({
       'string.base': 'Anexo deve ser um texto',
     })
   ).optional(),
-  parentComment: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional().messages({
+  parentComment: Joi.string().uuid().optional().messages({
     'string.base': 'ID do comentário pai deve ser um texto',
     'string.pattern.base': 'Por favor, forneça um ID de comentário pai válido',
   }),
@@ -37,7 +37,7 @@ export const updateCommentSchema = Joi.object({
 });
 
 export const getCommentSchema = Joi.object({
-  id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+  id: Joi.string().uuid().required().messages({
     'string.base': 'ID deve ser um texto',
     'string.empty': 'ID é obrigatório',
     'string.pattern.base': 'Por favor, forneça um ID válido',
@@ -46,7 +46,7 @@ export const getCommentSchema = Joi.object({
 });
 
 export const deleteCommentSchema = Joi.object({
-  id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+  id: Joi.string().uuid().required().messages({
     'string.base': 'ID deve ser um texto',
     'string.empty': 'ID é obrigatório',
     'string.pattern.base': 'Por favor, forneça um ID válido',
@@ -55,16 +55,16 @@ export const deleteCommentSchema = Joi.object({
 });
 
 export const queryCommentsSchema = Joi.object({
-  task: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional().messages({
+  task: Joi.string().uuid().optional().messages({
     'string.base': 'ID da tarefa deve ser um texto',
     'string.pattern.base': 'Por favor, forneça um ID de tarefa válido',
   }),
-  author: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional().messages({
+  author: Joi.string().uuid().optional().messages({
     'string.base': 'ID do autor deve ser um texto',
     'string.pattern.base': 'Por favor, forneça um ID de autor válido',
   }),
   parentComment: Joi.alternatives().try(
-    Joi.string().regex(/^[0-9a-fA-F]{24}$/),
+    Joi.string().uuid(),
     Joi.valid(null)
   ).optional().messages({
     'string.base': 'ID do comentário pai deve ser um texto',
@@ -85,7 +85,7 @@ export const queryCommentsSchema = Joi.object({
 });
 
 export const toggleCommentLikeSchema = Joi.object({
-  id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
+  id: Joi.string().uuid().required().messages({
     'string.base': 'ID deve ser um texto',
     'string.empty': 'ID é obrigatório',
     'string.pattern.base': 'Por favor, forneça um ID válido',

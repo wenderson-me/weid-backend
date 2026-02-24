@@ -42,7 +42,7 @@ class NoteService {
     const populatedNote = await Note.findByPk(note.id, {
       include: [
         { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'avatar'] },
-        { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] }
+        { model: User, as: 'createdBy', attributes: ['id', 'name', 'email', 'avatar'] }
       ]
     });
 
@@ -107,8 +107,8 @@ class NoteService {
     const populatedNote = await Note.findByPk(note.id, {
       include: [
         { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'avatar'] },
-        { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] },
-        { model: User, as: 'updater', attributes: ['id', 'name', 'email', 'avatar'] }
+        { model: User, as: 'createdBy', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'updatedBy', attributes: ['id', 'name', 'email', 'avatar'] }
       ]
     });
 
@@ -125,8 +125,8 @@ class NoteService {
     const note = await Note.findByPk(noteId, {
       include: [
         { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'avatar'] },
-        { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] },
-        { model: User, as: 'updater', attributes: ['id', 'name', 'email', 'avatar'] }
+        { model: User, as: 'createdBy', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'updatedBy', attributes: ['id', 'name', 'email', 'avatar'] }
       ]
     });
 
@@ -209,8 +209,8 @@ class NoteService {
       limit,
       include: [
         { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'avatar'] },
-        { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] },
-        { model: User, as: 'updater', attributes: ['id', 'name', 'email', 'avatar'] }
+        { model: User, as: 'createdBy', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'updatedBy', attributes: ['id', 'name', 'email', 'avatar'] }
       ]
     });
 
@@ -296,8 +296,8 @@ class NoteService {
     const populatedNote = await Note.findByPk(note.id, {
       include: [
         { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'avatar'] },
-        { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] },
-        { model: User, as: 'updater', attributes: ['id', 'name', 'email', 'avatar'] }
+        { model: User, as: 'createdBy', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'updatedBy', attributes: ['id', 'name', 'email', 'avatar'] }
       ]
     });
 
