@@ -1,4 +1,4 @@
-import { ActivityType } from '../models/activity.pg.model';
+import { ActivityType } from '../models/activity.model';
 import { sanitizeUser, UserResponse } from './user.types';
 
 export interface CreateActivityInput {

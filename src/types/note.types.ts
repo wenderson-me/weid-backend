@@ -1,4 +1,4 @@
-import { NoteCategory } from '../models/note.pg.model';
+import { NoteCategory } from '../models/note.model';
 import { sanitizeUser, UserResponse } from './user.types';
 
 export interface CreateNoteInput {

@@ -1,83 +1,123 @@
-import mongoose, { Document, Schema } from 'mongoose';
-import { IUser } from './user.model';
-import { ITask } from './task.model';
+import { DataTypes, Model, Optional } from 'sequelize';
+import { getSequelize } from '../config/database';
 
-export interface IComment extends Document {
+export interface CommentAttributes {
+  id: string;
   content: string;
-  task: mongoose.Types.ObjectId | ITask;
-  author: mongoose.Types.ObjectId | IUser;
+  taskId: string;
+  authorId: string;
   attachments?: string[];
-  likes: mongoose.Types.ObjectId[] | IUser[];
+  likes: string[];
   isEdited: boolean;
-  parentComment?: mongoose.Types.ObjectId | IComment;
-  createdAt: Date;
-  updatedAt: Date;
+  parentCommentId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-const commentSchema = new Schema<IComment>(
-  {
-    content: {
-      type: String,
-      required: [true, 'Content is required'],
-      trim: true,
-      maxlength: [5000, 'Content cannot exceed 5000 characters']
+interface CommentCreationAttributes extends Optional<CommentAttributes,
+  'id' | 'attachments' | 'likes' | 'isEdited' | 'parentCommentId' | 'createdAt' | 'updatedAt'
+> {}
+
+class Comment extends Model<CommentAttributes, CommentCreationAttributes> implements CommentAttributes {
+  public id!: string;
+  public content!: string;
+  public taskId!: string;
+  public authorId!: string;
+  public attachments?: string[];
+  public likes!: string[];
+  public isEdited!: boolean;
+  public parentCommentId?: string;
+
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
+}
+
+export const initCommentModel = () => {
+  const sequelize = getSequelize();
+
+  Comment.init(
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      content: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+        validate: {
+          notEmpty: { msg: 'Conteúdo é obrigatório' },
+          len: {
+            args: [1, 5000],
+            msg: 'Conteúdo não pode exceder 5000 caracteres'
+          }
+        }
+      },
+      taskId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: 'tasks',
+          key: 'id'
+        },
+        onDelete: 'CASCADE'
+      },
+      authorId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: 'users',
+          key: 'id'
+        },
+        onDelete: 'CASCADE'
+      },
+      attachments: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+        defaultValue: []
+      },
+      likes: {
+        type: DataTypes.ARRAY(DataTypes.UUID),
+        allowNull: false,
+        defaultValue: []
+      },
+      isEdited: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      },
+      parentCommentId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'comments',
+          key: 'id'
+        },
+        onDelete: 'CASCADE'
+      }
     },
-    task: {
-      type: Schema.Types.ObjectId,
-      ref: 'Task',
-      required: [true, 'Task reference is required']
-    },
-    author: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'Author is required']
-    },
-    attachments: {
-      type: [String],
-      default: []
-    },
-    likes: {
-      type: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-      default: []
-    },
-    isEdited: {
-      type: Boolean,
-      default: false
-    },
-    parentComment: {
-      type: Schema.Types.ObjectId,
-      ref: 'Comment',
-      default: null
+    {
+      sequelize,
+      tableName: 'comments',
+      modelName: 'Comment',
+      timestamps: true,
+      underscored: true,
+      validate: {
+        parentNotSelf() {
+          if (this.parentCommentId && this.parentCommentId === this.id) {
+            throw new Error('Um comentário não pode ser seu próprio pai');
+          }
+        }
+      },
+      indexes: [
+        { fields: ['task_id', 'created_at'] },
+        { fields: ['parent_comment_id'] },
+        { fields: ['author_id'] }
+      ]
     }
-  },
-  {
-    timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true }
-  }
-);
+  );
 
-
-commentSchema.virtual('replies', {
-  ref: 'Comment',
-  localField: '_id',
-  foreignField: 'parentComment',
-  options: { sort: { createdAt: 1 } }
-});
-
-
-commentSchema.pre('save', function(next) {
-  if (this.parentComment && this.parentComment.toString() === this._id.toString()) {
-    const error = new Error('A comment cannot be its own parent');
-    return next(error);
-  }
-  next();
-});
-
-commentSchema.index({ task: 1, createdAt: -1 });
-commentSchema.index({ parentComment: 1 });
-commentSchema.index({ author: 1 });
-
-const Comment = mongoose.model<IComment>('Comment', commentSchema);
+  return Comment;
+};
 
 export default Comment;

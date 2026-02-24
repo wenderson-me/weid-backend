@@ -1,7 +1,5 @@
-import mongoose, { Document, Schema } from 'mongoose';
-import { IUser } from './user.model';
-import { ITask } from './task.model';
-import { INote } from './note.model';
+import { DataTypes, Model, Optional } from 'sequelize';
+import { getSequelize } from '../config/database';
 
 export type ActivityType =
   'task_created' |
@@ -27,112 +25,142 @@ export type ActivityType =
   'preferences_updated' |
   'password_changed';
 
-export interface IActivity extends Document {
+export interface ActivityAttributes {
+  id: string;
   type: ActivityType;
-  task?: mongoose.Types.ObjectId | ITask;
-  note?: mongoose.Types.ObjectId | INote;
-  user: mongoose.Types.ObjectId | IUser;
-  targetUser?: mongoose.Types.ObjectId | IUser;
+  taskId?: string;
+  noteId?: string;
+  userId: string;
+  targetUserId?: string;
   description: string;
   metadata?: Record<string, any>;
-  createdAt: Date;
+  createdAt?: Date;
 }
 
-const activitySchema = new Schema<IActivity>(
-  {
-    type: {
-      type: String,
-      required: [true, 'Tipo de atividade é obrigatório'],
-      enum: {
-        values: [
-          'task_created',
-          'task_updated',
-          'task_status_changed',
-          'task_assigned',
-          'task_unassigned',
-          'task_completed',
-          'task_reopened',
-          'task_archived',
-          'attachment_added',
-          'due_date_changed',
-          'comment_added',
+interface ActivityCreationAttributes extends Optional<ActivityAttributes,
+  'id' | 'taskId' | 'noteId' | 'targetUserId' | 'metadata' | 'createdAt'
+> {}
 
-          'note_created',
-          'note_updated',
-          'note_pinned',
-          'note_unpinned',
-          'note_deleted',
+class Activity extends Model<ActivityAttributes, ActivityCreationAttributes> implements ActivityAttributes {
+  public id!: string;
+  public type!: ActivityType;
+  public taskId?: string;
+  public noteId?: string;
+  public userId!: string;
+  public targetUserId?: string;
+  public description!: string;
+  public metadata?: Record<string, any>;
 
-          'profile_updated',
-          'avatar_changed',
-          'preferences_updated',
-          'password_changed'
-        ],
-        message: 'Tipo de atividade inválido'
+  public readonly createdAt!: Date;
+}
+
+export const initActivityModel = () => {
+  const sequelize = getSequelize();
+
+  Activity.init(
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      type: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        validate: {
+          isIn: {
+            args: [[
+              'task_created',
+              'task_updated',
+              'task_status_changed',
+              'task_assigned',
+              'task_unassigned',
+              'task_completed',
+              'task_reopened',
+              'task_archived',
+              'attachment_added',
+              'due_date_changed',
+              'comment_added',
+              'note_created',
+              'note_updated',
+              'note_pinned',
+              'note_unpinned',
+              'note_deleted',
+              'profile_updated',
+              'avatar_changed',
+              'preferences_updated',
+              'password_changed'
+            ]],
+            msg: 'Tipo de atividade inválido'
+          }
+        }
+      },
+      taskId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'tasks',
+          key: 'id'
+        },
+        onDelete: 'CASCADE'
+      },
+      noteId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'notes',
+          key: 'id'
+        },
+        onDelete: 'CASCADE'
+      },
+      userId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: 'users',
+          key: 'id'
+        },
+        onDelete: 'CASCADE'
+      },
+      targetUserId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'users',
+          key: 'id'
+        },
+        onDelete: 'SET NULL'
+      },
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+        validate: {
+          notEmpty: { msg: 'Descrição da atividade é obrigatória' }
+        }
+      },
+      metadata: {
+        type: DataTypes.JSONB,
+        allowNull: true
       }
     },
-    task: {
-      type: Schema.Types.ObjectId,
-      ref: 'Task',
-    },
-    note: {
-      type: Schema.Types.ObjectId,
-      ref: 'Note',
-    },
-    user: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'Usuário que realizou a atividade é obrigatório']
-    },
-    targetUser: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    description: {
-      type: String,
-      required: [true, 'Descrição da atividade é obrigatória']
-    },
-    metadata: {
-      type: Schema.Types.Mixed
+    {
+      sequelize,
+      tableName: 'activities',
+      modelName: 'Activity',
+      timestamps: true,
+      updatedAt: false,
+      underscored: true,
+      indexes: [
+        { fields: ['user_id', 'created_at'] },
+        { fields: ['task_id'] },
+        { fields: ['note_id'] },
+        { fields: ['type'] },
+        { fields: ['created_at'] }
+      ]
     }
-  },
-  {
-    timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true }
-  }
-);
+  );
 
-activitySchema.pre<IActivity>('findOneAndUpdate', function(next) {
-  const err = new Error('Atividades não podem ser atualizadas');
-  next(err);
-});
-
-activitySchema.pre<IActivity>('validate', function(next) {
-  if (this.type.startsWith('task_') && !this.task) {
-    return next(new Error('ID da tarefa é obrigatório para atividades de tarefa'));
-  }
-
-  if (this.type.startsWith('note_') && !this.note) {
-    return next(new Error('ID da nota é obrigatório para atividades de nota'));
-  }
-
-  if ((this.type === 'profile_updated' || this.type === 'avatar_changed' ||
-       this.type === 'preferences_updated' || this.type === 'password_changed') &&
-      !this.targetUser) {
-    this.targetUser = this.user;
-  }
-
-  next();
-});
-
-activitySchema.index({ task: 1, createdAt: -1 });
-activitySchema.index({ note: 1, createdAt: -1 });
-activitySchema.index({ user: 1, createdAt: -1 });
-activitySchema.index({ targetUser: 1, createdAt: -1 });
-activitySchema.index({ type: 1 });
-activitySchema.index({ createdAt: -1 });
-
-const Activity = mongoose.model<IActivity>('Activity', activitySchema);
+  return Activity;
+};
 
 export default Activity;

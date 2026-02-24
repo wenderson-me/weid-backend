@@ -1,6 +1,6 @@
-import { Task, User, Activity, Comment, Note } from '../models/index.pg';
+import { Task, User, Activity, Comment, Note } from '../models';
 import { AppError } from '../middleware/error.middleware';
-import { UserPreferences } from '../models/user.pg.model';
+import { UserPreferences } from '../models/user.model';
 import { CreateUserInput, UpdateUserInput, sanitizeUser, UserResponse, UpdatePreferencesInput, UserStatistics } from '../types/user.types';
 import { MESSAGES, DEFAULT_PAGINATION, DEFAULT_SORTING, ACTIVITY_TYPES } from '../utils/constants';
 import { Op } from 'sequelize';

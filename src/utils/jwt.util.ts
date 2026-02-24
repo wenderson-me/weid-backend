@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import config from '../config/environment';
-import  User from '../models/user.pg.model';
+import  User from '../models/user.model';
 import { UserTokens } from '../types/user.types';
 
 /**

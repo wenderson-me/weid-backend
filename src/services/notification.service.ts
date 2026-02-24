@@ -1,5 +1,5 @@
 import { AppError } from '../middleware/error.middleware';
-import { Activity, User } from '../models/index.pg';
+import { Activity, User } from '../models';
 import { Op } from 'sequelize';
 import { MESSAGES, DEFAULT_PAGINATION } from '../utils/constants';
 

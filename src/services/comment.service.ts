@@ -1,5 +1,5 @@
 import { AppError } from '../middleware/error.middleware';
-import { Comment, Activity, Task, User } from '../models/index.pg';
+import { Comment, Activity, Task, User } from '../models';
 import { Op } from 'sequelize';
 import {
   CreateCommentInput,

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './error.middleware';
 import config from '../config/environment';
-import { User } from '../models/index.pg';
+import { User } from '../models';
 
 declare global {
   namespace Express {

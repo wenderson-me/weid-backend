@@ -1,4 +1,4 @@
-import { UserPreferences } from '../models/user.pg.model';
+import { UserPreferences } from '../models/user.model';
 
 export type UserRole = 'user' | 'admin' | 'manager';
 

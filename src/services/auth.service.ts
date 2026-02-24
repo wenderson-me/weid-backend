@@ -1,5 +1,5 @@
 import { AppError } from '../middleware/error.middleware';
-import { User, Activity } from '../models/index.pg';
+import { User, Activity } from '../models';
 import {
   LoginInput,
   UserTokens,

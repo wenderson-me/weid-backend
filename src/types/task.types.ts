@@ -1,4 +1,4 @@
-import { TaskStatus, TaskPriority } from '../models/task.pg.model';
+import { TaskStatus, TaskPriority } from '../models/task.model';
 import { sanitizeUser, UserResponse } from './user.types';
 
 export interface CreateTaskInput {

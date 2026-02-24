@@ -6,7 +6,7 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import config from './config/environment';
 import { connectDB } from './config/database';
-import { initModels } from './models/index.pg';
+import { initModels } from './models';
 import logger, { stream } from './config/logger';
 import { errorMiddleware } from './middleware/error.middleware';
 import { setupSwagger } from './config/swagger';

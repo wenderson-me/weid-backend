@@ -1,10 +1,10 @@
 import { Sequelize } from 'sequelize';
 import { getSequelize } from '../config/database';
-import User, { initUserModel } from './user.pg.model';
-import Task, { initTaskModel } from './task.pg.model';
-import Note, { initNoteModel } from './note.pg.model';
-import Comment, { initCommentModel } from './comment.pg.model';
-import Activity, { initActivityModel } from './activity.pg.model';
+import User, { initUserModel } from './user.model';
+import Task, { initTaskModel } from './task.model';
+import Note, { initNoteModel } from './note.model';
+import Comment, { initCommentModel } from './comment.model';
+import Activity, { initActivityModel } from './activity.model';
 
 let initialized = false;
 

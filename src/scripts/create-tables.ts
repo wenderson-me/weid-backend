@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 import { connectDB, getSequelize } from '../config/database';
-import { initModels } from '../models/index.pg';
+import { initModels } from '../models';
 
 async function createTables() {
   try {
