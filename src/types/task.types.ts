@@ -1,6 +1,4 @@
-import mongoose from 'mongoose';
-import { TaskStatus, TaskPriority, ITask } from '../models/task.model';
-import { IUser } from '../models/user.model';
+import { TaskStatus, TaskPriority } from '../models/task.pg.model';
 import { sanitizeUser, UserResponse } from './user.types';
 
 export interface CreateTaskInput {
@@ -56,21 +54,25 @@ export interface TaskStatistics {
 }
 
 export interface TaskResponse {
-  _id: string;
+  id: string;
   title: string;
   description?: string;
   status: TaskStatus;
   priority: TaskPriority;
   dueDate?: Date;
   estimatedHours?: number;
-  owner: UserResponse;
-  assignees: UserResponse[];
+  ownerId: string;
+  owner?: UserResponse;
+  assignees: string[];
   tags: string[];
   attachments: string[];
   color?: string;
   isArchived: boolean;
   progress: number;
-  createdBy: UserResponse;
+  position: number;
+  createdById: string;
+  createdBy?: UserResponse;
+  updatedById?: string;
   updatedBy?: UserResponse;
   createdAt: Date;
   updatedAt: Date;
@@ -84,59 +86,39 @@ export interface TasksWithPagination {
   pages: number;
 }
 
-export const sanitizeTask = (task: ITask, populateUsers = true): TaskResponse => {
+export const sanitizeTask = (task: any): TaskResponse => {
   const sanitizedTask: any = {
-    _id: task._id.toString(),
+    id: task.id,
     title: task.title,
     description: task.description,
     status: task.status,
     priority: task.priority,
     dueDate: task.dueDate,
     estimatedHours: task.estimatedHours,
-    tags: task.tags,
+    ownerId: task.ownerId,
+    assignees: task.assignees || [],
+    tags: task.tags || [],
     attachments: task.attachments || [],
     color: task.color,
     isArchived: task.isArchived,
     progress: task.progress,
+    position: task.position,
+    createdById: task.createdById,
+    updatedById: task.updatedById,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
   };
 
+  if (task.owner && typeof task.owner === 'object') {
+    sanitizedTask.owner = sanitizeUser(task.owner);
+  }
 
-  if (populateUsers) {
-    if (task.owner instanceof mongoose.Types.ObjectId) {
-      sanitizedTask.owner = task.owner.toString();
-    } else {
-      sanitizedTask.owner = sanitizeUser(task.owner as IUser);
-    }
+  if (task.createdBy && typeof task.createdBy === 'object') {
+    sanitizedTask.createdBy = sanitizeUser(task.createdBy);
+  }
 
-    sanitizedTask.assignees = task.assignees.map((assignee) => {
-      if (assignee instanceof mongoose.Types.ObjectId) {
-        return assignee.toString();
-      }
-      return sanitizeUser(assignee as IUser);
-    });
-
-    if (task.createdBy instanceof mongoose.Types.ObjectId) {
-      sanitizedTask.createdBy = task.createdBy.toString();
-    } else {
-      sanitizedTask.createdBy = sanitizeUser(task.createdBy as IUser);
-    }
-
-    if (task.updatedBy) {
-      if (task.updatedBy instanceof mongoose.Types.ObjectId) {
-        sanitizedTask.updatedBy = task.updatedBy.toString();
-      } else {
-        sanitizedTask.updatedBy = sanitizeUser(task.updatedBy as IUser);
-      }
-    }
-  } else {
-    sanitizedTask.owner = task.owner.toString();
-    sanitizedTask.assignees = task.assignees.map(assignee => assignee.toString());
-    sanitizedTask.createdBy = task.createdBy.toString();
-    if (task.updatedBy) {
-      sanitizedTask.updatedBy = task.updatedBy.toString();
-    }
+  if (task.updatedBy && typeof task.updatedBy === 'object') {
+    sanitizedTask.updatedBy = sanitizeUser(task.updatedBy);
   }
 
   return sanitizedTask;

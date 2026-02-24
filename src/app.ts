@@ -5,7 +5,8 @@ import cors from 'cors';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import config from './config/environment';
-import connectDB from './config/database';
+import { connectDB } from './config/database';
+import { initModels } from './models/index.pg';
 import logger, { stream } from './config/logger';
 import { errorMiddleware } from './middleware/error.middleware';
 import { setupSwagger } from './config/swagger';
@@ -78,6 +79,7 @@ const PORT = config.PORT;
 const startServer = async () => {
   try {
     await connectDB();
+    await initModels();
 
     app.listen(PORT, () => {
       logger.info(`Servidor rodando em http://localhost:${PORT}`);

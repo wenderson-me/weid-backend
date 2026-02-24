@@ -1,6 +1,5 @@
 import Joi from 'joi';
 
-// Schema para criação de notas
 export const createNoteSchema = Joi.object({
   title: Joi.string().min(1).max(200).required().messages({
     'string.base': 'Título deve ser um texto',
@@ -30,7 +29,6 @@ export const createNoteSchema = Joi.object({
   ).optional(),
 });
 
-// Schema para atualização de notas
 export const updateNoteSchema = Joi.object({
   title: Joi.string().min(1).max(200).optional().messages({
     'string.base': 'Título deve ser um texto',
@@ -56,7 +54,6 @@ export const updateNoteSchema = Joi.object({
   ).optional(),
 });
 
-// Schema para obtenção de nota por ID
 export const getNoteSchema = Joi.object({
   id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
     'string.base': 'ID deve ser um texto',
@@ -66,7 +63,6 @@ export const getNoteSchema = Joi.object({
   }),
 });
 
-// Schema para exclusão de nota
 export const deleteNoteSchema = Joi.object({
   id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
     'string.base': 'ID deve ser um texto',
@@ -76,7 +72,6 @@ export const deleteNoteSchema = Joi.object({
   }),
 });
 
-// Schema para consulta de notas
 export const queryNotesSchema = Joi.object({
   owner: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
   category: Joi.alternatives().try(

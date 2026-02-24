@@ -1,6 +1,5 @@
 import { AppError } from '../middleware/error.middleware';
-import User from '../models/user.model';
-import Activity from '../models/activity.model';
+import { User, Activity } from '../models/index.pg';
 import {
   LoginInput,
   UserTokens,
@@ -12,6 +11,7 @@ import {
 import { comparePassword, hashPassword } from '../utils/password.util';
 import { generateTokens, verifyToken } from '../utils/jwt.util';
 import { MESSAGES, ACTIVITY_TYPES } from '../utils/constants';
+import { Op } from 'sequelize';
 
 /**
  * Serviço de autenticação
@@ -23,7 +23,7 @@ class AuthService {
    * @returns Usuário criado e tokens
    */
   public async register(userData: CreateUserInput): Promise<{ user: any; tokens: UserTokens }> {
-    const existingUser = await User.findOne({ email: userData.email });
+    const existingUser = await User.findOne({ where: { email: userData.email } });
 
     if (existingUser) {
       throw new AppError(MESSAGES.VALIDATION.EMAIL_EXISTS, 409);
@@ -38,14 +38,14 @@ class AuthService {
 
     await Activity.create({
       type: ACTIVITY_TYPES.PROFILE_UPDATED,
-      user: user._id,
-      targetUser: user._id,
+      userId: user.id,
+      targetUserId: user.id,
       description: 'Conta de usuário criada',
     });
 
     return {
       user: {
-        _id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -61,7 +61,7 @@ class AuthService {
    * @returns Usuário e tokens
    */
   public async login(loginData: LoginInput): Promise<{ user: any; tokens: UserTokens }> {
-    const user = await User.findOne({ email: loginData.email }).select('+password');
+    const user = await User.scope('withPassword').findOne({ where: { email: loginData.email } });
 
     if (!user) {
       throw new AppError(MESSAGES.VALIDATION.INVALID_CREDENTIALS, 401);
@@ -85,8 +85,8 @@ class AuthService {
 
     await Activity.create({
       type: ACTIVITY_TYPES.PROFILE_UPDATED,
-      user: user._id,
-      targetUser: user._id,
+      userId: user.id,
+      targetUserId: user.id,
       description: 'Usuário realizou login',
       metadata: {
         previousLogin
@@ -95,7 +95,7 @@ class AuthService {
 
     return {
       user: {
-        _id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -117,7 +117,7 @@ class AuthService {
       throw new AppError('Token de refresh inválido ou expirado', 401);
     }
 
-    const user = await User.findById(decoded.id);
+    const user = await User.findByPk(decoded.id);
 
     if (!user) {
       throw new AppError('Usuário não encontrado', 404);
@@ -138,7 +138,7 @@ class AuthService {
    * @param passwordData Dados de senha
    */
   public async changePassword(userId: string, passwordData: ChangePasswordInput): Promise<void> {
-    const user = await User.findById(userId).select('+password');
+    const user = await User.scope('withPassword').findByPk(userId);
 
     if (!user) {
       throw new AppError(MESSAGES.NOT_FOUND.USER, 404);
@@ -163,8 +163,8 @@ class AuthService {
 
     await Activity.create({
       type: ACTIVITY_TYPES.PASSWORD_CHANGED,
-      user: userId,
-      targetUser: userId,
+      userId: userId,
+      targetUserId: userId,
       description: 'Senha alterada pelo usuário',
     });
   }
@@ -175,14 +175,14 @@ class AuthService {
    * @returns Booleano indicando sucesso
    */
   public async forgotPassword(data: ForgotPasswordInput): Promise<boolean> {
-    const user = await User.findOne({ email: data.email });
+    const user = await User.findOne({ where: { email: data.email } });
 
     if (!user) {
       return true;
     }
 
     const resetToken = user.createPasswordResetToken();
-    await user.save({ validateBeforeSave: false });
+    await user.save();
 
     sendPasswordResetEmail(user.email, resetToken);
 
@@ -190,8 +190,8 @@ class AuthService {
 
     await Activity.create({
       type: ACTIVITY_TYPES.PASSWORD_CHANGED,
-      user: user._id,
-      targetUser: user._id,
+      userId: user.id,
+      targetUserId: user.id,
       description: 'Solicitação de redefinição de senha',
     });
 
@@ -208,8 +208,10 @@ class AuthService {
     }
 
     const user = await User.findOne({
-      passwordResetToken: data.token,
-      passwordResetExpires: { $gt: new Date() },
+      where: {
+        resetPasswordToken: data.token,
+        resetPasswordExpires: { [Op.gt]: new Date() },
+      }
     });
 
     if (!user) {
@@ -217,14 +219,14 @@ class AuthService {
     }
 
     user.password = data.newPassword;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
     await user.save();
 
     await Activity.create({
       type: ACTIVITY_TYPES.PASSWORD_CHANGED,
-      user: user._id,
-      targetUser: user._id,
+      userId: user.id,
+      targetUserId: user.id,
       description: 'Senha redefinida com sucesso',
     });
   }
@@ -237,8 +239,8 @@ class AuthService {
   public async logout(userId: string): Promise<boolean> {
     await Activity.create({
       type: ACTIVITY_TYPES.PROFILE_UPDATED,
-      user: userId,
-      targetUser: userId,
+      userId: userId,
+      targetUserId: userId,
       description: 'Usuário realizou logout',
     });
     return true;

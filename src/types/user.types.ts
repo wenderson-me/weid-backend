@@ -1,4 +1,4 @@
-import { IUser, UserPreferences } from '../models/user.model';
+import { UserPreferences } from '../models/user.pg.model';
 
 export type UserRole = 'user' | 'admin' | 'manager';
 
@@ -64,7 +64,7 @@ export interface UserTokens {
 }
 
 export interface UserResponse {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   avatar?: string;
@@ -91,9 +91,9 @@ export interface UserStatistics {
   memberSince: Date;
 }
 
-export const sanitizeUser = (user: IUser): UserResponse => {
+export const sanitizeUser = (user: any): UserResponse => {
   return {
-    _id: user._id.toString(),
+    id: user.id,
     name: user.name,
     email: user.email,
     avatar: user.avatar,

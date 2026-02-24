@@ -3,12 +3,10 @@ node_modules
 /.pnp
 .pnp.js
 
-# Environment variables
+# Environment variables - NUNCA COMMITAR CREDENCIAIS!
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 .sql
 
 # Build directories
@@ -70,3 +68,27 @@ lerna-debug.log*
 .rts2_cache_cjs/
 .rts2_cache_es/
 .rts2_cache_umd/
+
+# Documentação (mantida em pasta separada)
+*.md
+!README.md
+
+# Arquivos informativos locais
+REPOSITORIO-INFO.txt
+ESTRUTURA-ARQUIVOS.txt
+
+# Configurações específicas do servidor
+ecosystem.config.js
+deploy.sh
+health-check.sh
+nginx.conf.example
+backup-db.sh
+mover-arquivos-docs.bat
+mover-arquivos-docs.sh
+
+# PM2
+.pm2/
+pids/
+*.pid
+*.seed
+*.pid.lock

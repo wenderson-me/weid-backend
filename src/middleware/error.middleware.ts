@@ -15,7 +15,6 @@ export class AppError extends Error {
   }
 }
 
-// Handler para erros operacionais
 const handleAppError = (err: AppError, res: Response) => {
   return res.status(err.statusCode).json({
     status: 'error',
@@ -23,7 +22,6 @@ const handleAppError = (err: AppError, res: Response) => {
   });
 };
 
-// Handler para erros do MongoDB
 const handleMongoDBError = (err: any, res: Response) => {
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];
@@ -48,7 +46,6 @@ const handleMongoDBError = (err: any, res: Response) => {
   });
 };
 
-// Handler para erro de JWT
 const handleJWTError = (res: Response) => {
   return res.status(401).json({
     status: 'error',
@@ -56,7 +53,6 @@ const handleJWTError = (res: Response) => {
   });
 };
 
-// Handler para erro de JWT expirado
 const handleJWTExpiredError = (res: Response) => {
   return res.status(401).json({
     status: 'error',
@@ -64,7 +60,6 @@ const handleJWTExpiredError = (res: Response) => {
   });
 };
 
-// Middleware principal de tratamento de erros
 export const errorMiddleware = (
   err: Error | AppError,
   req: Request,

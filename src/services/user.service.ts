@@ -1,11 +1,9 @@
-import Task from '../models/task.model';
+import { Task, User, Activity, Comment, Note } from '../models/index.pg';
 import { AppError } from '../middleware/error.middleware';
-import User, { IUser, UserPreferences } from '../models/user.model';
-import Activity from '../models/activity.model';
+import { UserPreferences } from '../models/user.pg.model';
 import { CreateUserInput, UpdateUserInput, sanitizeUser, UserResponse, UpdatePreferencesInput, UserStatistics } from '../types/user.types';
 import { MESSAGES, DEFAULT_PAGINATION, DEFAULT_SORTING, ACTIVITY_TYPES } from '../utils/constants';
-import Comment from '../models/comment.model';
-import Note from '../models/note.model';
+import { Op } from 'sequelize';
 
 /**
  * Serviço de usuários
@@ -17,7 +15,7 @@ class UserService {
    * @returns Usuário criado
    */
   public async createUser(userData: CreateUserInput): Promise<UserResponse> {
-    const existingUser = await User.findOne({ email: userData.email });
+    const existingUser = await User.findOne({ where: { email: userData.email } });
 
     if (existingUser) {
       throw new AppError(MESSAGES.VALIDATION.EMAIL_EXISTS, 409);
@@ -35,14 +33,14 @@ class UserService {
    * @returns Usuário atualizado
    */
   public async updateUser(userId: string, userData: UpdateUserInput): Promise<UserResponse> {
-    const user = await User.findById(userId);
+    const user = await User.findByPk(userId);
 
     if (!user) {
       throw new AppError(MESSAGES.NOT_FOUND.USER, 404);
     }
 
     if (userData.email && userData.email !== user.email) {
-      const existingUser = await User.findOne({ email: userData.email });
+      const existingUser = await User.findOne({ where: { email: userData.email } });
 
       if (existingUser) {
         throw new AppError(MESSAGES.VALIDATION.EMAIL_EXISTS, 409);
@@ -54,8 +52,8 @@ class UserService {
 
     await Activity.create({
       type: ACTIVITY_TYPES.PROFILE_UPDATED,
-      user: userId,
-      targetUser: userId,
+      userId: userId,
+      targetUserId: userId,
       description: 'Perfil de usuário atualizado',
       metadata: {
         changes: Object.keys(userData)
@@ -71,7 +69,7 @@ class UserService {
    * @returns Usuário encontrado
    */
   public async getUserById(userId: string): Promise<UserResponse> {
-    const user = await User.findById(userId);
+    const user = await User.findByPk(userId);
 
     if (!user) {
       throw new AppError(MESSAGES.NOT_FOUND.USER, 404);
@@ -86,12 +84,13 @@ class UserService {
    * @returns Booleano indicando sucesso
    */
   public async deleteUser(userId: string): Promise<boolean> {
-    const result = await User.findByIdAndDelete(userId);
+    const user = await User.findByPk(userId);
 
-    if (!result) {
+    if (!user) {
       throw new AppError(MESSAGES.NOT_FOUND.USER, 404);
     }
 
+    await user.destroy();
     return true;
   }
 
@@ -101,15 +100,14 @@ class UserService {
    * @returns Usuário desativado
    */
   public async deactivateUser(userId: string): Promise<UserResponse> {
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { isActive: false },
-      { new: true }
-    );
+    const user = await User.findByPk(userId);
 
     if (!user) {
       throw new AppError(MESSAGES.NOT_FOUND.USER, 404);
     }
+
+    user.isActive = false;
+    await user.save();
 
     return sanitizeUser(user);
   }
@@ -120,15 +118,14 @@ class UserService {
    * @returns Usuário reativado
    */
   public async activateUser(userId: string): Promise<UserResponse> {
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { isActive: true },
-      { new: true }
-    );
+    const user = await User.findByPk(userId);
 
     if (!user) {
       throw new AppError(MESSAGES.NOT_FOUND.USER, 404);
     }
+
+    user.isActive = true;
+    await user.save();
 
     return sanitizeUser(user);
   }
@@ -163,33 +160,35 @@ class UserService {
       sortOrder = DEFAULT_SORTING.USERS.ORDER,
     } = options;
 
-    const filter: any = {};
+    const where: any = {};
 
     if (role) {
-      filter.role = role;
+      where.role = role;
     }
 
     if (typeof isActive === 'boolean') {
-      filter.isActive = isActive;
+      where.isActive = isActive;
     }
 
     if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } },
       ];
     }
 
-    const total = await User.countDocuments(filter);
+    const total = await User.count({ where });
 
     const pages = Math.ceil(total / limit);
     const currentPage = page > pages ? pages : page;
-    const skip = (currentPage - 1) * limit;
+    const offset = (currentPage - 1) * limit;
 
-    const users = await User.find(filter)
-      .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
-      .skip(skip)
-      .limit(limit);
+    const users = await User.findAll({
+      where,
+      order: [[sortBy, sortOrder.toUpperCase()]],
+      offset,
+      limit,
+    });
 
     const sanitizedUsers = users.map(user => sanitizeUser(user));
 
@@ -209,7 +208,7 @@ class UserService {
    * @returns Usuário atualizado
    */
   public async updatePreferences(userId: string, preferencesData: UpdatePreferencesInput): Promise<UserResponse> {
-    const user = await User.findById(userId);
+    const user = await User.findByPk(userId);
 
     if (!user) {
       throw new AppError(MESSAGES.NOT_FOUND.USER, 404);
@@ -242,8 +241,8 @@ class UserService {
 
     await Activity.create({
       type: ACTIVITY_TYPES.PREFERENCES_UPDATED,
-      user: userId,
-      targetUser: userId,
+      userId: userId,
+      targetUserId: userId,
       description: 'Preferências do usuário atualizadas',
       metadata: {
         preferences: preferencesData
@@ -260,20 +259,19 @@ class UserService {
    * @returns Usuário atualizado
    */
   public async updateAvatar(userId: string, avatarUrl: string): Promise<UserResponse> {
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { avatar: avatarUrl },
-      { new: true }
-    );
+    const user = await User.findByPk(userId);
 
     if (!user) {
       throw new AppError(MESSAGES.NOT_FOUND.USER, 404);
     }
 
+    user.avatar = avatarUrl;
+    await user.save();
+
     await Activity.create({
       type: ACTIVITY_TYPES.AVATAR_CHANGED,
-      user: userId,
-      targetUser: userId,
+      userId: userId,
+      targetUserId: userId,
       description: 'Avatar do usuário atualizado',
     });
 
@@ -286,29 +284,31 @@ class UserService {
    * @returns Estatísticas do usuário
    */
   public async getUserStatistics(userId: string): Promise<UserStatistics> {
-    const user = await User.findById(userId);
+    const user = await User.findByPk(userId);
 
     if (!user) {
       throw new AppError(MESSAGES.NOT_FOUND.USER, 404);
     }
 
     const taskCounts = {
-      total: await Task.countDocuments({ assignees: userId }),
-      completed: await Task.countDocuments({ assignees: userId, status: 'done' }),
-      overdue: await Task.countDocuments({
-        assignees: userId,
-        status: { $ne: 'done' },
-        dueDate: { $lt: new Date() }
+      total: await Task.count({ where: { assignees: { [Op.contains]: [userId] } } }),
+      completed: await Task.count({ where: { assignees: { [Op.contains]: [userId] }, status: 'done' } }),
+      overdue: await Task.count({
+        where: {
+          assignees: { [Op.contains]: [userId] },
+          status: { [Op.ne]: 'done' },
+          dueDate: { [Op.lt]: new Date() }
+        }
       }),
-      inProgress: await Task.countDocuments({ assignees: userId, status: 'inProgress' })
+      inProgress: await Task.count({ where: { assignees: { [Op.contains]: [userId] }, status: 'inProgress' } })
     };
 
     const noteCounts = {
-      total: await Note.countDocuments({ owner: userId }),
-      pinned: await Note.countDocuments({ owner: userId, isPinned: true })
+      total: await Note.count({ where: { ownerId: userId } }),
+      pinned: await Note.count({ where: { ownerId: userId, isPinned: true } })
     };
 
-    const commentsCount = await Comment.countDocuments({ author: userId });
+    const commentsCount = await Comment.count({ where: { authorId: userId } });
 
     return {
       tasks: taskCounts,

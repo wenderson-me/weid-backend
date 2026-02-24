@@ -111,7 +111,6 @@ const userSchema = new Schema<IUser>(
   }
 );
 
-// Middleware para hash da senha antes de salvar
 userSchema.pre<IUser>('save', async function(next) {
   if (!this.isModified('password')) return next();
 

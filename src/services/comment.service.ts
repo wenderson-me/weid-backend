@@ -1,8 +1,6 @@
-import mongoose from 'mongoose';
 import { AppError } from '../middleware/error.middleware';
-import Comment, { IComment } from '../models/comment.model';
-import Activity from '../models/activity.model';
-import Task from '../models/task.model';
+import { Comment, Activity, Task, User } from '../models/index.pg';
+import { Op } from 'sequelize';
 import {
   CreateCommentInput,
   UpdateCommentInput,
@@ -24,14 +22,14 @@ class CommentService {
    * @returns Comentário criado
    */
   public async createComment(commentData: CreateCommentInput, userId: string): Promise<CommentResponse> {
-    const taskExists = await Task.exists({ _id: commentData.task });
+    const taskExists = await Task.findByPk(commentData.task);
 
     if (!taskExists) {
       throw new AppError(MESSAGES.NOT_FOUND.TASK, 404);
     }
 
     if (commentData.parentComment) {
-      const parentCommentExists = await Comment.exists({ _id: commentData.parentComment });
+      const parentCommentExists = await Comment.findByPk(commentData.parentComment);
 
       if (!parentCommentExists) {
         throw new AppError('Comentário pai não encontrado', 404);
@@ -40,24 +38,29 @@ class CommentService {
 
     const comment = await Comment.create({
       ...commentData,
-      author: userId,
+      authorId: userId,
+      taskId: commentData.task,
+      parentCommentId: commentData.parentComment,
     });
 
     await Activity.create({
       type: ACTIVITY_TYPES.COMMENT_ADDED,
-      task: commentData.task,
-      user: userId,
+      taskId: commentData.task,
+      userId: userId,
       description: `Comentário adicionado à tarefa`,
       metadata: {
-        commentId: comment._id,
+        commentId: comment.id,
         isReply: !!commentData.parentComment,
       },
     });
 
-    const populatedComment = await Comment.findById(comment._id)
-      .populate('author', 'name email avatar');
+    const populatedComment = await Comment.findByPk(comment.id, {
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    return sanitizeComment(populatedComment as IComment);
+    return sanitizeComment(populatedComment);
   }
 
   /**
@@ -72,13 +75,13 @@ class CommentService {
     commentData: UpdateCommentInput,
     userId: string
   ): Promise<CommentResponse> {
-    const comment = await Comment.findById(commentId);
+    const comment = await Comment.findByPk(commentId);
 
     if (!comment) {
       throw new AppError(MESSAGES.NOT_FOUND.COMMENT, 404);
     }
 
-    if (comment.author.toString() !== userId) {
+    if (comment.authorId !== userId) {
       throw new AppError('Você não tem permissão para editar este comentário', 403);
     }
 
@@ -91,10 +94,13 @@ class CommentService {
     comment.isEdited = true;
     await comment.save();
 
-    const populatedComment = await Comment.findById(comment._id)
-      .populate('author', 'name email avatar');
+    const populatedComment = await Comment.findByPk(comment.id, {
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    return sanitizeComment(populatedComment as IComment);
+    return sanitizeComment(populatedComment);
   }
 
   /**
@@ -103,9 +109,12 @@ class CommentService {
    * @returns Comentário encontrado
    */
   public async getCommentById(commentId: string): Promise<CommentResponse> {
-    const comment = await Comment.findById(commentId)
-      .populate('author', 'name email avatar')
-      .populate('likes', 'name email avatar');
+    const comment = await Comment.findByPk(commentId, {
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'likedByUsers', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
     if (!comment) {
       throw new AppError(MESSAGES.NOT_FOUND.COMMENT, 404);
@@ -135,45 +144,49 @@ class CommentService {
     const filter: any = {};
 
     if (task) {
-      filter.task = new mongoose.Types.ObjectId(task);
+      filter.taskId = task;
     }
 
     if (author) {
-      filter.author = new mongoose.Types.ObjectId(author);
+      filter.authorId = author;
     }
 
     if (parentComment === null) {
-      filter.parentComment = { $exists: false };
+      filter.parentCommentId = null;
     } else if (parentComment) {
-      filter.parentComment = new mongoose.Types.ObjectId(parentComment);
+      filter.parentCommentId = parentComment;
     }
 
     if (createdStart || createdEnd) {
       filter.createdAt = {};
 
       if (createdStart) {
-        filter.createdAt.$gte = new Date(createdStart);
+        filter.createdAt[Op.gte] = new Date(createdStart);
       }
 
       if (createdEnd) {
-        filter.createdAt.$lte = new Date(createdEnd);
+        filter.createdAt[Op.lte] = new Date(createdEnd);
       }
     }
 
-    const total = await Comment.countDocuments(filter);
+    const total = await Comment.count({ where: filter });
 
     const pages = Math.ceil(total / limit);
     const currentPage = page > pages ? pages || 1 : page;
     const skip = (currentPage - 1) * limit;
 
-    const comments = await Comment.find(filter)
-      .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate('author', 'name email avatar')
-      .populate('likes', 'name email avatar');
+    const comments = await Comment.findAll({
+      where: filter,
+      order: [[sortBy, sortOrder === 'asc' ? 'ASC' : 'DESC']],
+      offset: skip,
+      limit,
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'likedByUsers', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    const sanitizedComments = comments.map(comment => sanitizeComment(comment));
+    const sanitizedComments = comments.map((comment: any) => sanitizeComment(comment));
 
     return {
       comments: sanitizedComments,
@@ -191,19 +204,19 @@ class CommentService {
    * @returns Booleano indicando sucesso
    */
   public async deleteComment(commentId: string, userId: string): Promise<boolean> {
-    const comment = await Comment.findById(commentId);
+    const comment = await Comment.findByPk(commentId);
 
     if (!comment) {
       throw new AppError(MESSAGES.NOT_FOUND.COMMENT, 404);
     }
 
-    if (comment.author.toString() !== userId) {
+    if (comment.authorId !== userId) {
       throw new AppError('Você não tem permissão para excluir este comentário', 403);
     }
 
-    await comment.deleteOne();
+    await comment.destroy();
 
-    await Comment.deleteMany({ parentComment: commentId });
+    await Comment.destroy({ where: { parentCommentId: commentId } });
 
     return true;
   }
@@ -215,29 +228,34 @@ class CommentService {
    * @returns Comentário atualizado
    */
   public async toggleLike(commentId: string, userId: string): Promise<CommentResponse> {
-    const comment = await Comment.findById(commentId);
+    const comment = await Comment.findByPk(commentId);
 
     if (!comment) {
       throw new AppError(MESSAGES.NOT_FOUND.COMMENT, 404);
     }
 
-    const userLikeIndex = comment.likes.findIndex(
-      (id) => id.toString() === userId
+    const likes = comment.likes || [];
+    const userLikeIndex = likes.findIndex(
+      (id: string) => id === userId
     );
 
     if (userLikeIndex === -1) {
-      comment.likes.push();
+      likes.push(userId);
     } else {
-      comment.likes.splice(userLikeIndex, 1);
+      likes.splice(userLikeIndex, 1);
     }
 
+    comment.likes = likes;
     await comment.save();
 
-    const populatedComment = await Comment.findById(comment._id)
-      .populate('author', 'name email avatar')
-      .populate('likes', 'name email avatar');
+    const populatedComment = await Comment.findByPk(comment.id, {
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'likedByUsers', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    return sanitizeComment(populatedComment as IComment);
+    return sanitizeComment(populatedComment);
   }
 
   /**
@@ -246,18 +264,22 @@ class CommentService {
    * @returns Lista de comentários que são respostas
    */
   public async getCommentReplies(commentId: string): Promise<CommentResponse[]> {
-    const commentExists = await Comment.exists({ _id: commentId });
+    const commentExists = await Comment.findByPk(commentId);
 
     if (!commentExists) {
       throw new AppError(MESSAGES.NOT_FOUND.COMMENT, 404);
     }
 
-    const replies = await Comment.find({ parentComment: commentId })
-      .sort({ createdAt: 1 })
-      .populate('author', 'name email avatar')
-      .populate('likes', 'name email avatar');
+    const replies = await Comment.findAll({
+      where: { parentCommentId: commentId },
+      order: [['createdAt', 'ASC']],
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'likedByUsers', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    return replies.map(reply => sanitizeComment(reply));
+    return replies.map((reply: any) => sanitizeComment(reply));
   }
 }
 

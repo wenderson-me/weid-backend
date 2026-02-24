@@ -1,6 +1,3 @@
-// import mongoose, { Schema, Types } from 'mongoose';
-// import { IComment } from '../models/comment.model';
-// import { IUser } from '../models/user.model';
 import { sanitizeUser, UserResponse } from './user.types';
 
 export interface CreateCommentInput {
@@ -28,14 +25,18 @@ export interface CommentFilterOptions {
 }
 
 export interface CommentResponse {
-  _id: string;
+  id: string;
   content: string;
-  task: string;
-  author: UserResponse;
+  taskId: string;
+  task?: any;
+  authorId: string;
+  author?: UserResponse;
   attachments: string[];
-  likes: string[] | UserResponse[]
+  likes: string[];
+  likedByUsers?: UserResponse[];
   isEdited: boolean;
-  parentComment?: string;
+  parentCommentId?: string;
+  parentComment?: CommentResponse;
   replies?: CommentResponse[];
   createdAt: Date;
   updatedAt: Date;
@@ -49,42 +50,35 @@ export interface CommentsWithPagination {
   pages: number;
 }
 
-// TODO: Reimplementar após migração completa para PostgreSQL
-/*
-export const sanitizeComment = (comment: IComment, includeReplies = false): CommentResponse => {
+export const sanitizeComment = (comment: any): CommentResponse => {
   const sanitizedComment: any = {
-    _id: comment._id.toString(),
+    id: comment.id,
     content: comment.content,
-    task: comment.task.toString(),
+    taskId: comment.taskId,
+    authorId: comment.authorId,
     attachments: comment.attachments || [],
+    likes: comment.likes || [],
     isEdited: comment.isEdited,
+    parentCommentId: comment.parentCommentId,
     createdAt: comment.createdAt,
     updatedAt: comment.updatedAt,
   };
 
-  if (comment.author instanceof mongoose.Types.ObjectId) {
-    sanitizedComment.author = comment.author.toString();
-  } else {
-    sanitizedComment.author = sanitizeUser(comment.author as IUser);
+  if (comment.author && typeof comment.author === 'object') {
+    sanitizedComment.author = sanitizeUser(comment.author);
   }
 
-  sanitizedComment.likes = comment.likes.map((like) => {
-    if (like instanceof mongoose.Types.ObjectId) {
-      return like.toString();
-    }
-    return sanitizeUser(like as IUser);
-  });
-
-  if (comment.parentComment) {
-    sanitizedComment.parentComment = comment.parentComment.toString();
+  if (comment.likedByUsers && Array.isArray(comment.likedByUsers)) {
+    sanitizedComment.likedByUsers = comment.likedByUsers.map((user: any) => sanitizeUser(user));
   }
 
-  if (includeReplies && Array.isArray((comment as any).replies)) {
-    sanitizedComment.replies = (comment as any).replies.map((reply: IComment) =>
-      sanitizeComment(reply, false)
-    );
+  if (comment.parentComment && typeof comment.parentComment === 'object') {
+    sanitizedComment.parentComment = sanitizeComment(comment.parentComment);
+  }
+
+  if (comment.replies && Array.isArray(comment.replies)) {
+    sanitizedComment.replies = comment.replies.map((reply: any) => sanitizeComment(reply));
   }
 
   return sanitizedComment;
 };
-*/

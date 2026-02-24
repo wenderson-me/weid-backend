@@ -1,6 +1,4 @@
-import mongoose from 'mongoose';
-import { ActivityType, IActivity } from '../models/activity.model';
-import User from '../models/user.pg.model';
+import { ActivityType } from '../models/activity.pg.model';
 import { sanitizeUser, UserResponse } from './user.types';
 
 export interface CreateActivityInput {
@@ -27,11 +25,15 @@ export interface ActivityFilterOptions {
 }
 
 export interface ActivityResponse {
-  _id: string;
+  id: string;
   type: ActivityType;
-  task?: string;
-  note?: string;
-  user: UserResponse;
+  taskId?: string;
+  task?: any;
+  noteId?: string;
+  note?: any;
+  userId: string;
+  user?: UserResponse;
+  targetUserId?: string;
   targetUser?: UserResponse;
   description: string;
   metadata?: Record<string, any>;
@@ -46,35 +48,25 @@ export interface ActivitiesWithPagination {
   pages: number;
 }
 
-export const sanitizeActivity = (activity: IActivity): ActivityResponse => {
+export const sanitizeActivity = (activity: any): ActivityResponse => {
   const sanitizedActivity: any = {
-    _id: activity._id.toString(),
+    id: activity.id,
     type: activity.type,
     description: activity.description,
     metadata: activity.metadata,
     createdAt: activity.createdAt,
+    userId: activity.userId,
+    taskId: activity.taskId,
+    noteId: activity.noteId,
+    targetUserId: activity.targetUserId,
   };
 
-  if (activity.task) {
-    sanitizedActivity.task = activity.task.toString();
+  if (activity.user && typeof activity.user === 'object') {
+    sanitizedActivity.user = sanitizeUser(activity.user);
   }
 
-  if (activity.note) {
-    sanitizedActivity.note = activity.note.toString();
-  }
-
-  if (activity.user instanceof mongoose.Types.ObjectId) {
-    sanitizedActivity.user = activity.user.toString();
-  } else {
-    sanitizedActivity.user = sanitizeUser(activity.user as User);
-  }
-
-  if (activity.targetUser) {
-    if (activity.targetUser instanceof mongoose.Types.ObjectId) {
-      sanitizedActivity.targetUser = activity.targetUser.toString();
-    } else {
-      sanitizedActivity.targetUser = sanitizeUser(activity.targetUser as User);
-    }
+  if (activity.targetUser && typeof activity.targetUser === 'object') {
+    sanitizedActivity.targetUser = sanitizeUser(activity.targetUser);
   }
 
   return sanitizedActivity;

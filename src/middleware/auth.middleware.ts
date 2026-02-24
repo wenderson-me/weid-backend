@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './error.middleware';
 import config from '../config/environment';
-import User from '../models/user.model';
+import { User } from '../models/index.pg';
 
 declare global {
   namespace Express {
@@ -36,7 +36,10 @@ export const authenticate = async (
 
     const decoded = jwt.verify(token, config.JWT_SECRET) as jwt.JwtPayload;
 
-    const currentUser = await User.findById(decoded.id).select('+passwordChangedAt');
+    const currentUser = await User.findByPk(decoded.id, {
+      attributes: { include: ['passwordChangedAt'] }
+    });
+
     if (!currentUser) {
       return next(
         new AppError('O usuário deste token não existe mais.', 401)

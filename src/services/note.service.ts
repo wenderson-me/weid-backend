@@ -1,7 +1,6 @@
-import mongoose from 'mongoose';
 import { AppError } from '../middleware/error.middleware';
-import Note, { INote } from '../models/note.model';
-import Activity from '../models/activity.model';
+import { Note, Activity, User } from '../models/index.pg';
+import { Op } from 'sequelize';
 import {
   CreateNoteInput,
   UpdateNoteInput,
@@ -25,14 +24,14 @@ class NoteService {
   async createNote(noteData: CreateNoteInput, userId: string): Promise<NoteResponse> {
     const note = await Note.create({
       ...noteData,
-      owner: userId,
-      createdBy: userId,
+      ownerId: userId,
+      createdById: userId,
     });
 
     await Activity.create({
       type: ACTIVITY_TYPES.NOTE_CREATED,
-      note: note._id,
-      user: userId,
+      noteId: note.id,
+      userId: userId,
       description: `Nota criada: ${note.title}`,
       metadata: {
         category: note.category,
@@ -40,11 +39,14 @@ class NoteService {
       }
     });
 
-    const populatedNote = await Note.findById(note._id)
-      .populate('owner', 'name email avatar')
-      .populate('createdBy', 'name email avatar');
+    const populatedNote = await Note.findByPk(note.id, {
+      include: [
+        { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    return sanitizeNote(populatedNote as INote);
+    return sanitizeNote(populatedNote);
   }
 
   /**
@@ -55,13 +57,13 @@ class NoteService {
    * @returns {Promise<NoteResponse>} Nota atualizada
    */
   async updateNote(noteId: string, noteData: UpdateNoteInput, userId: string): Promise<NoteResponse> {
-    const note = await Note.findById(noteId);
+    const note = await Note.findByPk(noteId);
 
     if (!note) {
       throw new AppError('Nota não encontrada', 404);
     }
 
-    if (note.owner.toString() !== userId) {
+    if (note.ownerId !== userId) {
       throw new AppError('Você não tem permissão para atualizar esta nota', 403);
     }
 
@@ -81,8 +83,8 @@ class NoteService {
 
     activities.push({
       type: ACTIVITY_TYPES.NOTE_UPDATED,
-      note: note._id,
-      user: userId,
+      noteId: note.id,
+      userId: userId,
       description: `Nota atualizada: ${note.title}`,
       metadata: {
         changes: Object.keys(noteData),
@@ -92,22 +94,25 @@ class NoteService {
     if (noteData.isPinned !== undefined && oldIsPinned !== noteData.isPinned) {
       activities.push({
         type: noteData.isPinned ? ACTIVITY_TYPES.NOTE_PINNED : ACTIVITY_TYPES.NOTE_UNPINNED,
-        note: note._id,
-        user: userId,
+        noteId: note.id,
+        userId: userId,
         description: noteData.isPinned
           ? 'Nota foi fixada'
           : 'Nota foi desfixada',
       });
     }
 
-    await Activity.insertMany(activities);
+    await Activity.bulkCreate(activities);
 
-    const populatedNote = await Note.findById(note._id)
-      .populate('owner', 'name email avatar')
-      .populate('createdBy', 'name email avatar')
-      .populate('updatedBy', 'name email avatar');
+    const populatedNote = await Note.findByPk(note.id, {
+      include: [
+        { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'updater', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    return sanitizeNote(populatedNote as INote);
+    return sanitizeNote(populatedNote);
   }
 
   /**
@@ -117,10 +122,13 @@ class NoteService {
    * @returns {Promise<NoteResponse>} Nota encontrada
    */
   async getNoteById(noteId: string, userId: string): Promise<NoteResponse> {
-    const note = await Note.findById(noteId)
-      .populate('owner', 'name email avatar')
-      .populate('createdBy', 'name email avatar')
-      .populate('updatedBy', 'name email avatar');
+    const note = await Note.findByPk(noteId, {
+      include: [
+        { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'updater', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
     if (!note) {
       throw new AppError('Nota não encontrada', 404);
@@ -149,14 +157,17 @@ class NoteService {
       sortOrder = 'desc',
     } = options;
 
-    const filter: any = { owner: userId };
+    const filter: any = { ownerId: userId };
 
     if (category) {
-      filter.category = Array.isArray(category) ? { $in: category } : category;
+      filter.category = Array.isArray(category) ? { [Op.in]: category } : category;
     }
 
     if (search) {
-      filter.$text = { $search: search };
+      filter[Op.or] = [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { content: { [Op.iLike]: `%${search}%` } }
+      ];
     }
 
     if (typeof isPinned === 'boolean') {
@@ -164,51 +175,46 @@ class NoteService {
     }
 
     if (tags) {
-      filter.tags = Array.isArray(tags)
-        ? { $in: tags }
-        : { $in: [tags] };
+      const tagArray = Array.isArray(tags) ? tags : [tags];
+      filter.tags = { [Op.overlap]: tagArray };
     }
 
     if (createdStart || createdEnd) {
       filter.createdAt = {};
 
       if (createdStart) {
-        filter.createdAt.$gte = new Date(createdStart);
+        filter.createdAt[Op.gte] = new Date(createdStart);
       }
 
       if (createdEnd) {
-        filter.createdAt.$lte = new Date(createdEnd);
+        filter.createdAt[Op.lte] = new Date(createdEnd);
       }
     }
 
-    const total = await Note.countDocuments(filter);
+    const total = await Note.count({ where: filter });
 
     const pages = Math.ceil(total / limit);
     const currentPage = page > pages ? pages || 1 : page;
     const skip = (currentPage - 1) * limit;
 
-    let sortOptions: any = {};
-    if (search && sortBy === 'relevance') {
-      sortOptions = { score: { $meta: 'textScore' } };
-    } else {
-      sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    const order: any[] = [];
+    if (sortBy) {
+      order.push([sortBy, sortOrder === 'asc' ? 'ASC' : 'DESC']);
     }
 
-    let query = Note.find(filter);
+    const notes = await Note.findAll({
+      where: filter,
+      order,
+      offset: skip,
+      limit,
+      include: [
+        { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'updater', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    if (search && sortBy === 'relevance') {
-      query = query.select({ score: { $meta: 'textScore' } });
-    }
-
-    const notes = await query
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit)
-      .populate('owner', 'name email avatar')
-      .populate('createdBy', 'name email avatar')
-      .populate('updatedBy', 'name email avatar');
-
-    const sanitizedNotes = notes.map(note => sanitizeNote(note));
+    const sanitizedNotes = notes.map((note: any) => sanitizeNote(note));
 
     return {
       notes: sanitizedNotes,
@@ -226,20 +232,20 @@ class NoteService {
    * @returns {Promise<boolean>} Booleano indicando sucesso
    */
   async deleteNote(noteId: string, userId: string): Promise<boolean> {
-    const note = await Note.findById(noteId);
+    const note = await Note.findByPk(noteId);
 
     if (!note) {
       throw new AppError('Nota não encontrada', 404);
     }
 
-    if (note.owner.toString() !== userId) {
+    if (note.ownerId !== userId) {
       throw new AppError('Você não tem permissão para excluir esta nota', 403);
     }
 
     await Activity.create({
       type: ACTIVITY_TYPES.NOTE_DELETED,
-      note: note._id,
-      user: userId,
+      noteId: note.id,
+      userId: userId,
       description: `Nota excluída: ${note.title}`,
       metadata: {
         category: note.category,
@@ -247,7 +253,7 @@ class NoteService {
       }
     });
 
-    await note.deleteOne();
+    await note.destroy();
 
     return true;
   }
@@ -260,13 +266,13 @@ class NoteService {
    * @returns {Promise<NoteResponse>} Nota atualizada
    */
   async togglePinStatus(noteId: string, isPinned: boolean, userId: string): Promise<NoteResponse> {
-    const note = await Note.findById(noteId);
+    const note = await Note.findByPk(noteId);
 
     if (!note) {
       throw new AppError('Nota não encontrada', 404);
     }
 
-    if (note.owner.toString() !== userId) {
+    if (note.ownerId !== userId) {
       throw new AppError('Você não tem permissão para alterar esta nota', 403);
     }
 
@@ -275,24 +281,27 @@ class NoteService {
     }
 
     note.isPinned = isPinned;
-    note.updatedBy = new mongoose.Types.ObjectId(userId);
+    note.updatedById = userId;
     await note.save();
 
     await Activity.create({
       type: isPinned ? ACTIVITY_TYPES.NOTE_PINNED : ACTIVITY_TYPES.NOTE_UNPINNED,
-      note: note._id,
-      user: userId,
+      noteId: note.id,
+      userId: userId,
       description: isPinned
         ? 'Nota foi fixada'
         : 'Nota foi desfixada',
     });
 
-    const populatedNote = await Note.findById(note._id)
-      .populate('owner', 'name email avatar')
-      .populate('createdBy', 'name email avatar')
-      .populate('updatedBy', 'name email avatar');
+    const populatedNote = await Note.findByPk(note.id, {
+      include: [
+        { model: User, as: 'owner', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'updater', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    return sanitizeNote(populatedNote as INote);
+    return sanitizeNote(populatedNote);
   }
 
   /**
@@ -305,19 +314,24 @@ class NoteService {
     byCategory: Record<string, number>;
     pinned: number;
   }> {
-    const total = await Note.countDocuments({ owner: userId });
+    const total = await Note.count({ where: { ownerId: userId } });
 
-    const categoryCounts = await Note.aggregate([
-      { $match: { owner: new mongoose.Types.ObjectId(userId) } },
-      { $group: { _id: '$category', count: { $sum: 1 } } }
-    ]);
+    const categoryCounts = await Note.findAll({
+      where: { ownerId: userId },
+      attributes: [
+        'category',
+        [Note.sequelize!.fn('COUNT', Note.sequelize!.col('id')), 'count']
+      ],
+      group: ['category'],
+      raw: true
+    }) as any[];
 
     const byCategory: Record<string, number> = {};
-    categoryCounts.forEach((item) => {
-      byCategory[item._id] = item.count;
+    categoryCounts.forEach((item: any) => {
+      byCategory[item.category] = parseInt(item.count, 10);
     });
 
-    const pinned = await Note.countDocuments({ owner: userId, isPinned: true });
+    const pinned = await Note.count({ where: { ownerId: userId, isPinned: true } });
 
     return {
       total,

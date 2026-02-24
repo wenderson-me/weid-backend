@@ -1,9 +1,6 @@
-import mongoose from 'mongoose';
 import { AppError } from '../middleware/error.middleware';
-import Activity, { IActivity } from '../models/activity.model';
-import Task from '../models/task.model';
-import Note from '../models/note.model';
-import User from '../models/user.model';
+import { Activity, Task, Note, User } from '../models/index.pg';
+import { Op } from 'sequelize';
 import {
   CreateActivityInput,
   ActivityFilterOptions,
@@ -25,17 +22,17 @@ class ActivityService {
    */
   public async createActivity(activityData: CreateActivityInput, userId: string): Promise<ActivityResponse> {
     if (activityData.type.startsWith('task_') && activityData.task) {
-      const taskExists = await Task.exists({ _id: activityData.task });
+      const taskExists = await Task.findByPk(activityData.task);
       if (!taskExists) {
         throw new AppError(MESSAGES.NOT_FOUND.TASK, 404);
       }
     } else if (activityData.type.startsWith('note_') && activityData.note) {
-      const noteExists = await Note.exists({ _id: activityData.note });
+      const noteExists = await Note.findByPk(activityData.note);
       if (!noteExists) {
         throw new AppError(MESSAGES.NOT_FOUND.NOTE, 404);
       }
     } else if (activityData.targetUser) {
-      const userExists = await User.exists({ _id: activityData.targetUser });
+      const userExists = await User.findByPk(activityData.targetUser);
       if (!userExists) {
         throw new AppError(MESSAGES.NOT_FOUND.USER, 404);
       }
@@ -43,14 +40,20 @@ class ActivityService {
 
     const activity = await Activity.create({
       ...activityData,
-      user: userId,
+      userId: userId,
+      taskId: activityData.task,
+      noteId: activityData.note,
+      targetUserId: activityData.targetUser,
     });
 
-    const populatedActivity = await Activity.findById(activity._id)
-      .populate('user', 'name email avatar')
-      .populate('targetUser', 'name email avatar');
+    const populatedActivity = await Activity.findByPk(activity.id, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'targetUser', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    return sanitizeActivity(populatedActivity as IActivity);
+    return sanitizeActivity(populatedActivity);
   }
 
   /**
@@ -59,9 +62,12 @@ class ActivityService {
    * @returns Atividade encontrada
    */
   public async getActivityById(activityId: string): Promise<ActivityResponse> {
-    const activity = await Activity.findById(activityId)
-      .populate('user', 'name email avatar')
-      .populate('targetUser', 'name email avatar');
+    const activity = await Activity.findByPk(activityId, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'targetUser', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
     if (!activity) {
       throw new AppError(MESSAGES.NOT_FOUND.ACTIVITY, 404);
@@ -93,51 +99,55 @@ class ActivityService {
     const filter: any = {};
 
     if (task) {
-      filter.task = new mongoose.Types.ObjectId(task);
+      filter.taskId = task;
     }
 
     if (note) {
-      filter.note = new mongoose.Types.ObjectId(note);
+      filter.noteId = note;
     }
 
     if (user) {
-      filter.user = new mongoose.Types.ObjectId(user);
+      filter.userId = user;
     }
 
     if (targetUser) {
-      filter.targetUser = new mongoose.Types.ObjectId(targetUser);
+      filter.targetUserId = targetUser;
     }
 
     if (type) {
-      filter.type = Array.isArray(type) ? { $in: type } : type;
+      filter.type = Array.isArray(type) ? { [Op.in]: type } : type;
     }
 
     if (createdStart || createdEnd) {
       filter.createdAt = {};
 
       if (createdStart) {
-        filter.createdAt.$gte = new Date(createdStart);
+        filter.createdAt[Op.gte] = new Date(createdStart);
       }
 
       if (createdEnd) {
-        filter.createdAt.$lte = new Date(createdEnd);
+        filter.createdAt[Op.lte] = new Date(createdEnd);
       }
     }
 
-    const total = await Activity.countDocuments(filter);
+    const total = await Activity.count({ where: filter });
 
     const pages = Math.ceil(total / limit);
     const currentPage = page > pages ? pages || 1 : page;
     const skip = (currentPage - 1) * limit;
 
-    const activities = await Activity.find(filter)
-      .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate('user', 'name email avatar')
-      .populate('targetUser', 'name email avatar');
+    const activities = await Activity.findAll({
+      where: filter,
+      order: [[sortBy, sortOrder === 'asc' ? 'ASC' : 'DESC']],
+      offset: skip,
+      limit,
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'targetUser', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    const sanitizedActivities = activities.map(activity => sanitizeActivity(activity));
+    const sanitizedActivities = activities.map((activity: any) => sanitizeActivity(activity));
 
     return {
       activities: sanitizedActivities,
@@ -155,19 +165,23 @@ class ActivityService {
    * @returns Lista de atividades
    */
   public async getTaskHistory(taskId: string, limit = 50): Promise<ActivityResponse[]> {
-    const taskExists = await Task.exists({ _id: taskId });
+    const taskExists = await Task.findByPk(taskId);
 
     if (!taskExists) {
       throw new AppError(MESSAGES.NOT_FOUND.TASK, 404);
     }
 
-    const activities = await Activity.find({ task: taskId })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .populate('user', 'name email avatar')
-      .populate('targetUser', 'name email avatar');
+    const activities = await Activity.findAll({
+      where: { taskId },
+      order: [['createdAt', 'DESC']],
+      limit,
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'targetUser', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    return activities.map(activity => sanitizeActivity(activity));
+    return activities.map((activity: any) => sanitizeActivity(activity));
   }
 
   /**
@@ -177,19 +191,23 @@ class ActivityService {
    * @returns Lista de atividades
    */
   public async getNoteHistory(noteId: string, limit = 50): Promise<ActivityResponse[]> {
-    const noteExists = await Note.exists({ _id: noteId });
+    const noteExists = await Note.findByPk(noteId);
 
     if (!noteExists) {
       throw new AppError(MESSAGES.NOT_FOUND.NOTE, 404);
     }
 
-    const activities = await Activity.find({ note: noteId })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .populate('user', 'name email avatar')
-      .populate('targetUser', 'name email avatar');
+    const activities = await Activity.findAll({
+      where: { noteId },
+      order: [['createdAt', 'DESC']],
+      limit,
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'targetUser', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    return activities.map(activity => sanitizeActivity(activity));
+    return activities.map((activity: any) => sanitizeActivity(activity));
   }
 
   /**
@@ -199,13 +217,17 @@ class ActivityService {
    * @returns Lista de atividades
    */
   public async getUserActivities(userId: string, limit = 20): Promise<ActivityResponse[]> {
-    const activities = await Activity.find({ user: userId })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .populate('user', 'name email avatar')
-      .populate('targetUser', 'name email avatar');
+    const activities = await Activity.findAll({
+      where: { userId },
+      order: [['createdAt', 'DESC']],
+      limit,
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'targetUser', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
 
-    return activities.map(activity => sanitizeActivity(activity));
+    return activities.map((activity: any) => sanitizeActivity(activity));
   }
 
   /**
@@ -216,18 +238,22 @@ class ActivityService {
    * @returns Lista de atividades
    */
   public async getUserRelatedActivities(userId: string, limit = 20): Promise<ActivityResponse[]> {
-    const activities = await Activity.find({
-      $or: [
-        { user: userId },
-        { targetUser: userId }
+    const activities = await Activity.findAll({
+      where: {
+        [Op.or]: [
+          { userId },
+          { targetUserId: userId }
+        ]
+      },
+      order: [['createdAt', 'DESC']],
+      limit,
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'targetUser', attributes: ['id', 'name', 'email', 'avatar'] }
       ]
-    })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .populate('user', 'name email avatar')
-      .populate('targetUser', 'name email avatar');
+    });
 
-    return activities.map(activity => sanitizeActivity(activity));
+    return activities.map((activity: any) => sanitizeActivity(activity));
   }
 }
 

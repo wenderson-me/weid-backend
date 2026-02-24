@@ -1,7 +1,6 @@
 import Joi from 'joi';
 import { TASK_STATUS, TASK_PRIORITY } from '../utils/constants';
 
-// Schema para criação de tarefa
 export const createTaskSchema = Joi.object({
   title: Joi.string().min(3).max(200).required().messages({
     'string.base': 'Título deve ser um texto',
@@ -46,7 +45,6 @@ export const createTaskSchema = Joi.object({
   color: Joi.string().optional(),
 });
 
-// Schema para atualização de tarefa
 export const updateTaskSchema = Joi.object({
   title: Joi.string().min(3).max(200).optional().messages({
     'string.base': 'Título deve ser um texto',
@@ -95,7 +93,6 @@ export const updateTaskSchema = Joi.object({
   isArchived: Joi.boolean().optional(),
 });
 
-// Schema para obtenção de tarefa por ID
 export const getTaskSchema = Joi.object({
   id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
     'string.base': 'ID deve ser um texto',
@@ -105,7 +102,6 @@ export const getTaskSchema = Joi.object({
   }),
 });
 
-// Schema para exclusão de tarefa
 export const deleteTaskSchema = Joi.object({
   id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
     'string.base': 'ID deve ser um texto',
@@ -115,7 +111,6 @@ export const deleteTaskSchema = Joi.object({
   }),
 });
 
-// Schema para consulta de tarefas
 export const queryTasksSchema = Joi.object({
   status: Joi.alternatives().try(
     Joi.string().valid(TASK_STATUS.TODO, TASK_STATUS.IN_PROGRESS, TASK_STATUS.IN_REVIEW, TASK_STATUS.DONE),

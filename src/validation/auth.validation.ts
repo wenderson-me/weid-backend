@@ -1,6 +1,5 @@
 import Joi from 'joi';
 
-// Regras de validação para senhas
 const passwordRules = Joi.string()
   .min(8)
   .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])/)
@@ -8,7 +7,6 @@ const passwordRules = Joi.string()
     'A senha deve conter pelo menos 8 caracteres, incluindo letras maiúsculas, minúsculas, números e caracteres especiais'
   );
 
-// Schema para registro de usuário
 export const registerSchema = Joi.object({
   name: Joi.string().min(2).max(100).required().messages({
     'string.base': 'Nome deve ser um texto',
@@ -43,7 +41,6 @@ export const registerSchema = Joi.object({
   avatar: Joi.string().optional(),
 });
 
-// Schema para redefinição de senha
 export const resetPasswordSchema = Joi.object({
   token: Joi.string().required().messages({
     'string.base': 'Token deve ser um texto',
@@ -65,7 +62,6 @@ export const resetPasswordSchema = Joi.object({
   }),
 });
 
-// Schema para login de usuário
 export const loginSchema = Joi.object({
   email: Joi.string().email().required().messages({
     'string.base': 'Email deve ser um texto',
@@ -80,7 +76,6 @@ export const loginSchema = Joi.object({
   }),
 });
 
-// Schema para refresh de token
 export const refreshTokenSchema = Joi.object({
   refreshToken: Joi.string().required().messages({
     'string.base': 'Refresh token deve ser um texto',
@@ -89,7 +84,6 @@ export const refreshTokenSchema = Joi.object({
   }),
 });
 
-// Schema para alteração de senha
 export const changePasswordSchema = Joi.object({
   currentPassword: Joi.string().required().messages({
     'string.base': 'Senha atual deve ser um texto',
@@ -111,7 +105,6 @@ export const changePasswordSchema = Joi.object({
   }),
 });
 
-// Schema para solicitação de redefinição de senha
 export const forgotPasswordSchema = Joi.object({
   email: Joi.string().email().required().messages({
     'string.base': 'Email deve ser um texto',

@@ -1,5 +1,4 @@
 import { Request } from 'express';
-// import { Document, Types } from 'mongoose';
 
 export enum UserRole {
   ADMIN = 'admin',

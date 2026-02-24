@@ -1,6 +1,5 @@
 import Joi from 'joi';
 
-// Schema para criação de comentário
 export const createCommentSchema = Joi.object({
   content: Joi.string().required().messages({
     'string.base': 'Conteúdo deve ser um texto',
@@ -24,7 +23,6 @@ export const createCommentSchema = Joi.object({
   }),
 });
 
-// Schema para atualização de comentário
 export const updateCommentSchema = Joi.object({
   content: Joi.string().required().messages({
     'string.base': 'Conteúdo deve ser um texto',
@@ -38,7 +36,6 @@ export const updateCommentSchema = Joi.object({
   ).optional(),
 });
 
-// Schema para obtenção de comentário por ID
 export const getCommentSchema = Joi.object({
   id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
     'string.base': 'ID deve ser um texto',
@@ -48,7 +45,6 @@ export const getCommentSchema = Joi.object({
   }),
 });
 
-// Schema para exclusão de comentário
 export const deleteCommentSchema = Joi.object({
   id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
     'string.base': 'ID deve ser um texto',
@@ -58,7 +54,6 @@ export const deleteCommentSchema = Joi.object({
   }),
 });
 
-// Schema para consulta de comentários
 export const queryCommentsSchema = Joi.object({
   task: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional().messages({
     'string.base': 'ID da tarefa deve ser um texto',
@@ -89,7 +84,6 @@ export const queryCommentsSchema = Joi.object({
   sortOrder: Joi.string().valid('asc', 'desc').optional(),
 });
 
-// Schema para adicionar ou remover curtida em comentário
 export const toggleCommentLikeSchema = Joi.object({
   id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
     'string.base': 'ID deve ser um texto',

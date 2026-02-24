@@ -1,6 +1,6 @@
-import mongoose from 'mongoose';
 import { AppError } from '../middleware/error.middleware';
-import Activity, { IActivity } from '../models/activity.model';
+import { Activity, User } from '../models/index.pg';
+import { Op } from 'sequelize';
 import { MESSAGES, DEFAULT_PAGINATION } from '../utils/constants';
 
 interface NotificationFilters {
@@ -49,43 +49,47 @@ class NotificationService {
       } = filters;
 
       const query: any = {
-        $or: [
-          { user: userId },
-          { targetUser: userId },
+        [Op.or]: [
+          { userId },
+          { targetUserId: userId },
         ]
       };
 
       if (unreadOnly) {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        query.createdAt = { $gte: sevenDaysAgo };
+        query.createdAt = { [Op.gte]: sevenDaysAgo };
       }
 
       const skip = (page - 1) * limit;
 
       const [activities, total] = await Promise.all([
-        Activity.find(query)
-          .populate('user', 'name email')
-          .populate('targetUser', 'name email')
-          .populate('task', 'title status')
-          .populate('note', 'title')
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        Activity.countDocuments(query)
+        Activity.findAll({
+          where: query,
+          include: [
+            { model: User, as: 'user', attributes: ['id', 'name', 'email'] },
+            { model: User, as: 'targetUser', attributes: ['id', 'name', 'email'] }
+          ],
+          order: [['createdAt', 'DESC']],
+          offset: skip,
+          limit,
+          raw: false
+        }),
+        Activity.count({ where: query })
       ]);
 
-      const notifications = activities.map(activity => this.transformActivityToNotification(activity, userId));
+      const notifications = activities.map((activity: any) => this.transformActivityToNotification(activity, userId));
 
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const unreadCount = await Activity.countDocuments({
-        $or: [
-          { user: userId },
-          { targetUser: userId }
-        ],
-        createdAt: { $gte: sevenDaysAgo }
+      const unreadCount = await Activity.count({
+        where: {
+          [Op.or]: [
+            { userId },
+            { targetUserId: userId }
+          ],
+          createdAt: { [Op.gte]: sevenDaysAgo }
+        }
       });
 
       const pages = Math.ceil(total / limit);
@@ -107,8 +111,8 @@ class NotificationService {
    * Transforma uma atividade em notificação
    */
   private transformActivityToNotification(activity: any, currentUserId: string): NotificationResponse {
-    const isOwnActivity = activity.user._id.toString() === currentUserId;
-    const userName = activity.user.name || activity.user.email;
+    const isOwnActivity = activity.userId === currentUserId;
+    const userName = activity.user?.name || activity.user?.email;
     const targetUserName = activity.targetUser?.name || activity.targetUser?.email;
 
     let title = '';
@@ -126,7 +130,7 @@ class NotificationService {
           : `${userName} criou a tarefa "${activity.task?.title || 'Sem título'}"`;
         type = 'task';
         priority = 'medium';
-        relatedId = activity.task?._id;
+        relatedId = activity.taskId;
         relatedType = 'task';
         break;
 
@@ -137,7 +141,7 @@ class NotificationService {
           : `${userName} foi designado para a tarefa "${activity.task?.title || 'Sem título'}"`;
         type = 'task';
         priority = 'high';
-        relatedId = activity.task?._id;
+        relatedId = activity.taskId;
         relatedType = 'task';
         break;
 
@@ -148,7 +152,7 @@ class NotificationService {
           : `${userName} concluiu a tarefa "${activity.task?.title || 'Sem título'}"`;
         type = 'completion';
         priority = 'medium';
-        relatedId = activity.task?._id;
+        relatedId = activity.taskId;
         relatedType = 'task';
         break;
 
@@ -159,7 +163,7 @@ class NotificationService {
           : `${userName} alterou o status da tarefa "${activity.task?.title || 'Sem título'}"`;
         type = 'task';
         priority = 'low';
-        relatedId = activity.task?._id;
+        relatedId = activity.taskId;
         relatedType = 'task';
         break;
 
@@ -170,7 +174,7 @@ class NotificationService {
           : `${userName} comentou na tarefa "${activity.task?.title || 'Sem título'}"`;
         type = 'comment';
         priority = 'low';
-        relatedId = activity.task?._id;
+        relatedId = activity.taskId;
         relatedType = 'task';
         break;
 
@@ -181,7 +185,7 @@ class NotificationService {
           : `${userName} alterou o prazo da tarefa "${activity.task?.title || 'Sem título'}"`;
         type = 'reminder';
         priority = 'high';
-        relatedId = activity.task?._id;
+        relatedId = activity.taskId;
         relatedType = 'task';
         break;
 
@@ -192,7 +196,7 @@ class NotificationService {
           : `${userName} criou a nota "${activity.note?.title || 'Sem título'}"`;
         type = 'note';
         priority = 'low';
-        relatedId = activity.note?._id;
+        relatedId = activity.noteId;
         relatedType = 'note';
         break;
 
@@ -203,7 +207,7 @@ class NotificationService {
           : `${userName} atualizou a nota "${activity.note?.title || 'Sem título'}"`;
         type = 'note';
         priority = 'low';
-        relatedId = activity.note?._id;
+        relatedId = activity.noteId;
         relatedType = 'note';
         break;
 
@@ -229,7 +233,7 @@ class NotificationService {
     const isRead = activity.createdAt < sevenDaysAgo;
 
     return {
-      id: activity._id.toString(),
+      id: activity.id,
       title,
       message,
       timestamp: activity.createdAt,
@@ -259,12 +263,14 @@ class NotificationService {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const count = await Activity.countDocuments({
-      $or: [
-        { user: userId },
-        { targetUser: userId }
-      ],
-      createdAt: { $gte: sevenDaysAgo }
+    const count = await Activity.count({
+      where: {
+        [Op.or]: [
+          { userId },
+          { targetUserId: userId }
+        ],
+        createdAt: { [Op.gte]: sevenDaysAgo }
+      }
     });
 
     return { success: true, count };
@@ -285,12 +291,14 @@ class NotificationService {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    return await Activity.countDocuments({
-      $or: [
-        { user: userId },
-        { targetUser: userId }
-      ],
-      createdAt: { $gte: sevenDaysAgo }
+    return await Activity.count({
+      where: {
+        [Op.or]: [
+          { userId },
+          { targetUserId: userId }
+        ],
+        createdAt: { [Op.gte]: sevenDaysAgo }
+      }
     });
   }
 }

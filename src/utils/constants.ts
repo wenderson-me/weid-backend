@@ -1,4 +1,3 @@
-// Status de tarefas
 export const TASK_STATUS = {
   TODO: 'todo',
   IN_PROGRESS: 'inProgress',
@@ -6,7 +5,6 @@ export const TASK_STATUS = {
   DONE: 'done',
 } as const;
 
-// Prioridades de tarefas
 export const TASK_PRIORITY = {
   LOW: 'low',
   MEDIUM: 'medium',
@@ -14,14 +12,12 @@ export const TASK_PRIORITY = {
   URGENT: 'urgent',
 } as const;
 
-// Papéis de usuários
 export const USER_ROLES = {
   USER: 'user',
   ADMIN: 'admin',
   MANAGER: 'manager',
 } as const;
 
-// Categorias de notas
 export const NOTE_CATEGORY = {
   GENERAL: 'general',
   PERSONAL: 'personal',
@@ -30,9 +26,7 @@ export const NOTE_CATEGORY = {
   IDEA: 'idea',
 } as const;
 
-// Tipos de atividades
 export const ACTIVITY_TYPES = {
-  // Atividades de Tarefas
   TASK_CREATED: 'task_created',
   TASK_UPDATED: 'task_updated',
   TASK_STATUS_CHANGED: 'task_status_changed',
@@ -45,28 +39,24 @@ export const ACTIVITY_TYPES = {
   ATTACHMENT_ADDED: 'attachment_added',
   DUE_DATE_CHANGED: 'due_date_changed',
 
-  // Atividades de Notas
   NOTE_CREATED: 'note_created',
   NOTE_UPDATED: 'note_updated',
   NOTE_PINNED: 'note_pinned',
   NOTE_UNPINNED: 'note_unpinned',
   NOTE_DELETED: 'note_deleted',
 
-  // Atividades de Perfil
   PROFILE_UPDATED: 'profile_updated',
   AVATAR_CHANGED: 'avatar_changed',
   PREFERENCES_UPDATED: 'preferences_updated',
   PASSWORD_CHANGED: 'password_changed'
 } as const;
 
-// Opções de paginação padrão
 export const DEFAULT_PAGINATION = {
   PAGE: 1,
   LIMIT: 10,
   MAX_LIMIT: 100,
 } as const;
 
-// Opções de ordenação padrão
 export const DEFAULT_SORTING = {
   TASKS: {
     FIELD: 'createdAt',
@@ -90,7 +80,6 @@ export const DEFAULT_SORTING = {
   },
 } as const;
 
-// Mensagens comuns de erro/sucesso
 export const MESSAGES = {
   NOT_FOUND: {
     USER: 'Usuário não encontrado',

@@ -1,7 +1,6 @@
-import mongoose from 'mongoose';
 import { AppError } from '../middleware/error.middleware';
-import Task, { ITask } from '../models/task.model';
-import Activity from '../models/activity.model';
+import { Task, Activity, User } from '../models/index.pg';
+import { Op } from 'sequelize';
 import {
   CreateTaskInput,
   UpdateTaskInput,
@@ -27,24 +26,25 @@ class TaskService {
 
     const task = await Task.create({
       ...taskData,
-      owner: userId,
-      createdBy: userId,
+      ownerId: userId,
+      createdById: userId,
     });
-
 
     await Activity.create({
       type: ACTIVITY_TYPES.TASK_CREATED,
-      task: task._id,
-      user: userId,
+      taskId: task.id,
+      userId: userId,
       description: `Tarefa criada: ${task.title}`,
     });
 
-    const populatedTask = await Task.findById(task._id)
-      .populate('owner', 'name email avatar')
-      .populate('assignees', 'name email avatar')
-      .populate('createdBy', 'name email avatar');
+    const populatedTask = await Task.findByPk(task.id, {
+      include: [
+        { model: User, as: 'owner', attributes: ['name', 'email', 'avatar'] },
+        { model: User, as: 'createdBy', attributes: ['name', 'email', 'avatar'] }
+      ]
+    });
 
-    return sanitizeTask(populatedTask as ITask);
+    return sanitizeTask(populatedTask!);
   }
 
   /**
@@ -55,27 +55,29 @@ class TaskService {
    * @returns Tarefa atualizada
    */
   public async updateTask(taskId: string, taskData: UpdateTaskInput, userId: string): Promise<TaskResponse> {
-    const task = await Task.findById(taskId);
+    const task = await Task.findByPk(taskId);
 
     if (!task) {
       throw new AppError(MESSAGES.NOT_FOUND.TASK, 404);
     }
 
-  if (task.status !== taskData.status && taskData.status) {
-    const maxPositionTask = await Task.findOne({ status: taskData.status })
-      .sort({ position: -1 })
-      .limit(1);
+    if (task.status !== taskData.status && taskData.status) {
+      const maxPositionTask = await Task.findOne({
+        where: { status: taskData.status },
+        order: [['position', 'DESC']],
+        limit: 1
+      });
 
-    const newPosition = maxPositionTask ? maxPositionTask.position + 1 : 0;
-    taskData.position = newPosition;
-  }
+      const newPosition = maxPositionTask ? maxPositionTask.position + 1 : 0;
+      taskData.position = newPosition;
+    }
 
     const statusChanged = taskData.status && taskData.status !== task.status;
     const oldStatus = task.status;
 
     Object.assign(task, {
       ...taskData,
-      updatedBy: userId,
+      updatedById: userId,
     });
 
     if (statusChanged) {
@@ -100,8 +102,8 @@ class TaskService {
 
     activities.push({
       type: ACTIVITY_TYPES.TASK_UPDATED,
-      task: task._id,
-      user: userId,
+      taskId: task.id,
+      userId: userId,
       description: `Tarefa atualizada: ${task.title}`,
       metadata: {
         changes: Object.keys(taskData),
@@ -111,8 +113,8 @@ class TaskService {
     if (statusChanged) {
       activities.push({
         type: ACTIVITY_TYPES.TASK_STATUS_CHANGED,
-        task: task._id,
-        user: userId,
+        taskId: task.id,
+        userId: userId,
         description: `Status alterado de ${oldStatus} para ${task.status}`,
         metadata: {
           oldStatus,
@@ -123,15 +125,15 @@ class TaskService {
       if (task.status === 'done') {
         activities.push({
           type: ACTIVITY_TYPES.TASK_COMPLETED,
-          task: task._id,
-          user: userId,
+          taskId: task.id,
+          userId: userId,
           description: 'Tarefa marcada como concluída',
         });
       } else if (oldStatus === 'done') {
         activities.push({
           type: ACTIVITY_TYPES.TASK_REOPENED,
-          task: task._id,
-          user: userId,
+          taskId: task.id,
+          userId: userId,
           description: 'Tarefa reaberta',
         });
       }
@@ -140,8 +142,8 @@ class TaskService {
     if ('dueDate' in taskData) {
       activities.push({
         type: ACTIVITY_TYPES.DUE_DATE_CHANGED,
-        task: task._id,
-        user: userId,
+        taskId: task.id,
+        userId: userId,
         description: taskData.dueDate
           ? `Data de entrega definida para ${new Date(taskData.dueDate).toLocaleDateString()}`
           : 'Data de entrega removida',
@@ -156,29 +158,31 @@ class TaskService {
       if (taskData.isArchived) {
         activities.push({
           type: ACTIVITY_TYPES.TASK_ARCHIVED,
-          task: task._id,
-          user: userId,
+          taskId: task.id,
+          userId: userId,
           description: 'Tarefa arquivada',
         });
       } else {
         activities.push({
           type: ACTIVITY_TYPES.TASK_REOPENED,
-          task: task._id,
-          user: userId,
+          taskId: task.id,
+          userId: userId,
           description: 'Tarefa desarquivada',
         });
       }
     }
 
-    await Activity.insertMany(activities);
+    await Activity.bulkCreate(activities);
 
-    const populatedTask = await Task.findById(task._id)
-      .populate('owner', 'name email avatar')
-      .populate('assignees', 'name email avatar')
-      .populate('createdBy', 'name email avatar')
-      .populate('updatedBy', 'name email avatar');
+    const populatedTask = await Task.findByPk(task.id, {
+      include: [
+        { model: User, as: 'owner', attributes: ['name', 'email', 'avatar'] },
+        { model: User, as: 'createdBy', attributes: ['name', 'email', 'avatar'] },
+        { model: User, as: 'updatedBy', attributes: ['name', 'email', 'avatar'] }
+      ]
+    });
 
-    return sanitizeTask(populatedTask as ITask);
+    return sanitizeTask(populatedTask!);
   }
 
   /**
@@ -187,11 +191,13 @@ class TaskService {
    * @returns Tarefa encontrada
    */
   public async getTaskById(taskId: string): Promise<TaskResponse> {
-    const task = await Task.findById(taskId)
-      .populate('owner', 'name email avatar')
-      .populate('assignees', 'name email avatar')
-      .populate('createdBy', 'name email avatar')
-      .populate('updatedBy', 'name email avatar');
+    const task = await Task.findByPk(taskId, {
+      include: [
+        { model: User, as: 'owner', attributes: ['name', 'email', 'avatar'] },
+        { model: User, as: 'createdBy', attributes: ['name', 'email', 'avatar'] },
+        { model: User, as: 'updatedBy', attributes: ['name', 'email', 'avatar'] }
+      ]
+    });
 
     if (!task) {
       throw new AppError(MESSAGES.NOT_FOUND.TASK, 404);
@@ -222,72 +228,74 @@ class TaskService {
       sortOrder = DEFAULT_SORTING.TASKS.ORDER,
     } = options;
 
-    const filter: any = { isArchived };
+    const where: any = { isArchived };
 
-    const sort: any = {};
-      sort[options.sortBy || DEFAULT_SORTING.TASKS.FIELD] = options.sortOrder === 'asc' ? 1 : -1;
+    const order: any[] = [];
+    order.push([options.sortBy || DEFAULT_SORTING.TASKS.FIELD, options.sortOrder === 'asc' ? 'ASC' : 'DESC']);
 
     if (status) {
-      filter.status = Array.isArray(status) ? { $in: status } : status;
+      where.status = Array.isArray(status) ? { [Op.in]: status } : status;
     }
 
     if (priority) {
-      filter.priority = Array.isArray(priority) ? { $in: priority } : priority;
+      where.priority = Array.isArray(priority) ? { [Op.in]: priority } : priority;
     }
 
     if (options.sortBy !== 'position') {
-      sort.position = 1;
+      order.push(['position', 'ASC']);
     }
 
     if (owner) {
-      filter.owner = new mongoose.Types.ObjectId(owner);
+      where.ownerId = owner;
     }
 
     if (assignee) {
-      filter.assignees = new mongoose.Types.ObjectId(assignee);
+      where.assignees = { [Op.contains]: [assignee] };
     }
 
     if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
+      where[Op.or] = [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } },
       ];
     }
 
     if (tags) {
-      filter.tags = Array.isArray(tags)
-        ? { $in: tags }
-        : { $in: [tags] };
+      const tagsArray = Array.isArray(tags) ? tags : [tags];
+      where.tags = { [Op.overlap]: tagsArray };
     }
 
     if (dueStart || dueEnd) {
-      filter.dueDate = {};
+      where.dueDate = {};
 
       if (dueStart) {
-        filter.dueDate.$gte = new Date(dueStart);
+        where.dueDate[Op.gte] = new Date(dueStart);
       }
 
       if (dueEnd) {
-        filter.dueDate.$lte = new Date(dueEnd);
+        where.dueDate[Op.lte] = new Date(dueEnd);
       }
     }
 
-    const total = await Task.countDocuments(filter);
+    const total = await Task.count({ where });
 
     const pages = Math.ceil(total / limit);
     const currentPage = page > pages ? pages || 1 : page;
-    const skip = (currentPage - 1) * limit;
+    const offset = (currentPage - 1) * limit;
 
-    const tasks = await Task.find(filter)
-      .sort(sort)
-      .skip(skip)
-      .limit(limit)
-      .populate('owner', 'name email avatar')
-      .populate('assignees', 'name email avatar')
-      .populate('createdBy', 'name email avatar')
-      .populate('updatedBy', 'name email avatar');
+    const tasks = await Task.findAll({
+      where,
+      order,
+      offset,
+      limit,
+      include: [
+        { model: User, as: 'owner', attributes: ['name', 'email', 'avatar'] },
+        { model: User, as: 'createdBy', attributes: ['name', 'email', 'avatar'] },
+        { model: User, as: 'updatedBy', attributes: ['name', 'email', 'avatar'] }
+      ]
+    });
 
-      const sanitizedTasks = tasks.map(task => sanitizeTask(task));
+    const sanitizedTasks = tasks.map(task => sanitizeTask(task));
 
     return {
       tasks: sanitizedTasks,
@@ -304,12 +312,13 @@ class TaskService {
    * @returns Booleano indicando sucesso
    */
   public async deleteTask(taskId: string): Promise<boolean> {
-    const result = await Task.findByIdAndDelete(taskId);
+    const task = await Task.findByPk(taskId);
 
-    if (!result) {
+    if (!task) {
       throw new AppError(MESSAGES.NOT_FOUND.TASK, 404);
     }
 
+    await task.destroy();
     return true;
   }
 
@@ -343,41 +352,41 @@ class TaskService {
    * @returns Tarefa atualizada
    */
   public async assignUser(taskId: string, assigneeId: string, userId: string): Promise<TaskResponse> {
-    const task = await Task.findById(taskId);
+    const task = await Task.findByPk(taskId);
 
     if (!task) {
       throw new AppError(MESSAGES.NOT_FOUND.TASK, 404);
     }
 
-    const isAlreadyAssigned = task.assignees.some(
-      (id) => id.toString() === assigneeId
-    );
+    const isAlreadyAssigned = task.assignees.includes(assigneeId);
 
     if (isAlreadyAssigned) {
       throw new AppError('Usuário já está atribuído a esta tarefa', 400);
     }
 
-    task.assignees.push(new mongoose.Types.ObjectId(assigneeId));
-    task.updatedBy = new mongoose.Types.ObjectId(userId);
+    task.assignees = [...task.assignees, assigneeId];
+    task.updatedById = userId;
     await task.save();
 
     await Activity.create({
       type: ACTIVITY_TYPES.TASK_ASSIGNED,
-      task: task._id,
-      user: userId,
+      taskId: task.id,
+      userId: userId,
       description: `Usuário atribuído à tarefa`,
       metadata: {
         assigneeId,
       },
     });
 
-    const populatedTask = await Task.findById(task._id)
-      .populate('owner', 'name email avatar')
-      .populate('assignees', 'name email avatar')
-      .populate('createdBy', 'name email avatar')
-      .populate('updatedBy', 'name email avatar');
+    const populatedTask = await Task.findByPk(task.id, {
+      include: [
+        { model: User, as: 'owner', attributes: ['name', 'email', 'avatar'] },
+        { model: User, as: 'createdBy', attributes: ['name', 'email', 'avatar'] },
+        { model: User, as: 'updatedBy', attributes: ['name', 'email', 'avatar'] }
+      ]
+    });
 
-    return sanitizeTask(populatedTask as ITask);
+    return sanitizeTask(populatedTask!);
   }
 
   /**
@@ -388,43 +397,41 @@ class TaskService {
    * @returns Tarefa atualizada
    */
   public async unassignUser(taskId: string, assigneeId: string, userId: string): Promise<TaskResponse> {
-    const task = await Task.findById(taskId);
+    const task = await Task.findByPk(taskId);
 
     if (!task) {
       throw new AppError(MESSAGES.NOT_FOUND.TASK, 404);
     }
 
-    const isAssigned = task.assignees.some(
-      (id) => id.toString() === assigneeId
-    );
+    const isAssigned = task.assignees.includes(assigneeId);
 
     if (!isAssigned) {
       throw new AppError('Usuário não está atribuído a esta tarefa', 400);
     }
 
-    task.assignees = task.assignees.filter(
-      (id) => id.toString() !== assigneeId
-    );
-    task.updatedBy = new mongoose.Types.ObjectId(userId);
+    task.assignees = task.assignees.filter(id => id !== assigneeId);
+    task.updatedById = userId;
     await task.save();
 
     await Activity.create({
       type: ACTIVITY_TYPES.TASK_UNASSIGNED,
-      task: task._id,
-      user: userId,
+      taskId: task.id,
+      userId: userId,
       description: `Usuário removido da tarefa`,
       metadata: {
         assigneeId,
       },
     });
 
-    const populatedTask = await Task.findById(task._id)
-      .populate('owner', 'name email avatar')
-      .populate('assignees', 'name email avatar')
-      .populate('createdBy', 'name email avatar')
-      .populate('updatedBy', 'name email avatar');
+    const populatedTask = await Task.findByPk(task.id, {
+      include: [
+        { model: User, as: 'owner', attributes: ['name', 'email', 'avatar'] },
+        { model: User, as: 'createdBy', attributes: ['name', 'email', 'avatar'] },
+        { model: User, as: 'updatedBy', attributes: ['name', 'email', 'avatar'] }
+      ]
+    });
 
-    return sanitizeTask(populatedTask as ITask);
+    return sanitizeTask(populatedTask!);
   }
 
   /**
@@ -439,43 +446,47 @@ class TaskService {
   } = {}): Promise<TaskStatistics> {
     const { owner, assignee, isArchived = false } = filters;
 
-    const baseFilter: any = { isArchived };
+    const baseWhere: any = { isArchived };
 
     if (owner) {
-      baseFilter.owner = new mongoose.Types.ObjectId(owner);
+      baseWhere.ownerId = owner;
     }
 
     if (assignee) {
-      baseFilter.assignees = new mongoose.Types.ObjectId(assignee);
+      baseWhere.assignees = { [Op.contains]: [assignee] };
     }
 
-    const total = await Task.countDocuments(baseFilter);
+    const total = await Task.count({ where: baseWhere });
 
     const byStatus = {
-      todo: await Task.countDocuments({ ...baseFilter, status: 'todo' }),
-      inProgress: await Task.countDocuments({ ...baseFilter, status: 'inProgress' }),
-      inReview: await Task.countDocuments({ ...baseFilter, status: 'inReview' }),
-      done: await Task.countDocuments({ ...baseFilter, status: 'done' }),
+      todo: await Task.count({ where: { ...baseWhere, status: 'todo' } }),
+      inProgress: await Task.count({ where: { ...baseWhere, status: 'inProgress' } }),
+      inReview: await Task.count({ where: { ...baseWhere, status: 'inReview' } }),
+      done: await Task.count({ where: { ...baseWhere, status: 'done' } }),
     };
 
     const byPriority = {
-      low: await Task.countDocuments({ ...baseFilter, priority: 'low' }),
-      medium: await Task.countDocuments({ ...baseFilter, priority: 'medium' }),
-      high: await Task.countDocuments({ ...baseFilter, priority: 'high' }),
-      urgent: await Task.countDocuments({ ...baseFilter, priority: 'urgent' }),
+      low: await Task.count({ where: { ...baseWhere, priority: 'low' } }),
+      medium: await Task.count({ where: { ...baseWhere, priority: 'medium' } }),
+      high: await Task.count({ where: { ...baseWhere, priority: 'high' } }),
+      urgent: await Task.count({ where: { ...baseWhere, priority: 'urgent' } }),
     };
 
     const completed = byStatus.done;
 
-    const overdue = await Task.countDocuments({
-      ...baseFilter,
-      status: { $ne: 'done' },
-      dueDate: { $lt: new Date() },
+    const overdue = await Task.count({
+      where: {
+        ...baseWhere,
+        status: { [Op.ne]: 'done' },
+        dueDate: { [Op.lt]: new Date() },
+      }
     });
 
-    const withoutAssignee = await Task.countDocuments({
-      ...baseFilter,
-      assignees: { $size: 0 },
+    const withoutAssignee = await Task.count({
+      where: {
+        ...baseWhere,
+        assignees: { [Op.eq]: [] },
+      }
     });
 
     return {

@@ -131,7 +131,6 @@ taskSchema.virtual('activities', {
   foreignField: 'task'
 });
 
-// Middleware para atualizar status de progresso automaticamente
 taskSchema.pre<ITask>('save', function(next) {
   if (this.status === 'done') {
     this.progress = 100;

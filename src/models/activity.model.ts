@@ -4,7 +4,6 @@ import { ITask } from './task.model';
 import { INote } from './note.model';
 
 export type ActivityType =
-  // Atividades de Tarefas
   'task_created' |
   'task_updated' |
   'task_status_changed' |
@@ -17,14 +16,12 @@ export type ActivityType =
   'due_date_changed' |
   'comment_added' |
 
-  // Atividades de Notas
   'note_created' |
   'note_updated' |
   'note_pinned' |
   'note_unpinned' |
   'note_deleted' |
 
-  // Atividades de Perfil
   'profile_updated' |
   'avatar_changed' |
   'preferences_updated' |
@@ -48,7 +45,6 @@ const activitySchema = new Schema<IActivity>(
       required: [true, 'Tipo de atividade é obrigatório'],
       enum: {
         values: [
-          // Atividades de Tarefas
           'task_created',
           'task_updated',
           'task_status_changed',
@@ -61,14 +57,12 @@ const activitySchema = new Schema<IActivity>(
           'due_date_changed',
           'comment_added',
 
-          // Atividades de Notas
           'note_created',
           'note_updated',
           'note_pinned',
           'note_unpinned',
           'note_deleted',
 
-          // Atividades de Perfil
           'profile_updated',
           'avatar_changed',
           'preferences_updated',

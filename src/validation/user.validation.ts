@@ -1,6 +1,5 @@
 import Joi from 'joi';
 
-// Schema para criação de usuário
 export const createUserSchema = Joi.object({
   name: Joi.string().min(2).max(100).required().messages({
     'string.base': 'Nome deve ser um texto',
@@ -34,7 +33,6 @@ export const createUserSchema = Joi.object({
   isActive: Joi.boolean().default(true),
 });
 
-// Schema para atualização de usuário
 export const updateUserSchema = Joi.object({
   name: Joi.string().min(2).max(100).optional().messages({
     'string.base': 'Nome deve ser um texto',
@@ -53,7 +51,6 @@ export const updateUserSchema = Joi.object({
   isActive: Joi.boolean().optional(),
 });
 
-// Schema para obtenção de usuário por ID
 export const getUserSchema = Joi.object({
   id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
     'string.base': 'ID deve ser um texto',
@@ -63,7 +60,6 @@ export const getUserSchema = Joi.object({
   }),
 });
 
-// Schema para exclusão de usuário
 export const deleteUserSchema = Joi.object({
   id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
     'string.base': 'ID deve ser um texto',
@@ -73,7 +69,6 @@ export const deleteUserSchema = Joi.object({
   }),
 });
 
-// Schema para consulta de usuários
 export const queryUsersSchema = Joi.object({
   search: Joi.string().optional(),
   role: Joi.string().valid('user', 'admin', 'manager').optional(),
@@ -102,7 +97,6 @@ export const updatePreferencesSchema = Joi.object({
   }).optional(),
 });
 
-// Schema for avatar upload
 export const avatarUploadSchema = Joi.object({
   avatar: Joi.string().required().messages({
     'string.base': 'Avatar deve ser um texto',
