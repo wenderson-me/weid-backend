@@ -1,9 +1,7 @@
-import swaggerJsdoc from 'swagger-jsdoc';
 import { Express } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import config from './environment';
 
-// Definição de componentes reutilizáveis
 const components = {
   securitySchemes: {
     bearerAuth: {
@@ -1386,72 +1384,66 @@ const paths = {
   },
 };
 
-// Opções do Swagger
-const options: swaggerJsdoc.Options = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'API Weid',
-      version: '1.0.0',
-      description: 'Documentação da API Weid para gerenciamento pessoal',
-      contact: {
-        name: 'Suporte Weid',
-        email: 'suporte@weid.com',
-      },
+// Especificação OpenAPI completa
+const swaggerSpec = {
+  openapi: '3.0.0',
+  info: {
+    title: 'API Weid',
+    version: '1.0.0',
+    description: 'Documentação da API Weid para gerenciamento pessoal',
+    contact: {
+      name: 'Suporte Weid',
+      email: 'suporte@weid.com',
     },
-    servers: [
-      {
-        url: `http://localhost:${config.PORT}${config.API_PREFIX}`,
-        description: 'Servidor de Desenvolvimento',
-      },
-    ],
-    components,
-    paths,
-    tags: [
-      {
-        name: 'Auth',
-        description: 'Endpoints para autenticação e gestão de sessão',
-      },
-      {
-        name: 'Users',
-        description: 'Endpoints para gerenciamento de usuários',
-      },
-      {
-        name: 'Tasks',
-        description: 'Endpoints para gerenciamento de tarefas',
-      },
-      {
-        name: 'Comments',
-        description: 'Endpoints para gerenciamento de comentários em tarefas',
-      },
-      {
-        name: 'Activities',
-        description: 'Endpoints para registro e consulta de atividades',
-      },
-      {
-        name: 'Notes',
-        description: 'Endpoints para gerenciamento de notas pessoais',
-      },
-    ],
-    security: [
-      {
-        bearerAuth: [],
-      },
-    ],
   },
-  apis: [],
+  servers: [
+    {
+      url: `http://localhost:${config.PORT}${config.API_PREFIX}`,
+      description: 'Servidor de Desenvolvimento',
+    },
+  ],
+  components,
+  paths,
+  tags: [
+    {
+      name: 'Auth',
+      description: 'Endpoints para autenticação e gestão de sessão',
+    },
+    {
+      name: 'Users',
+      description: 'Endpoints para gerenciamento de usuários',
+    },
+    {
+      name: 'Tasks',
+      description: 'Endpoints para gerenciamento de tarefas',
+    },
+    {
+      name: 'Comments',
+      description: 'Endpoints para gerenciamento de comentários em tarefas',
+    },
+    {
+      name: 'Activities',
+      description: 'Endpoints para registro e consulta de atividades',
+    },
+    {
+      name: 'Notes',
+      description: 'Endpoints para gerenciamento de notas pessoais',
+    },
+  ],
+  security: [
+    {
+      bearerAuth: [],
+    },
+  ],
 };
-
-// Gerar a especificação do Swagger
-const specs = swaggerJsdoc(options);
 
 // Função para configurar o Swagger na aplicação
 export const setupSwagger = (app: Express): void => {
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     explorer: true,
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'API Weid - Documentação',
   }));
 };
 
-export default specs;
+export default swaggerSpec;
