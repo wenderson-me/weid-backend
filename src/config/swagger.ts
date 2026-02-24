@@ -1439,17 +1439,24 @@ const swaggerSpec = {
 
 // Função para configurar o Swagger na aplicação
 export const setupSwagger = (app: Express): void => {
-  // Servir o JSON da especificação
+  // Servir o JSON da especificação sem cache
   app.get('/api-docs/swagger.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.send(swaggerSpec);
   });
-  
+
   // Servir a interface do Swagger UI
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     explorer: true,
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'API Weid - Documentação',
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+    },
   }));
 };
 
