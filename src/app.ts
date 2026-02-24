@@ -5,6 +5,7 @@ import cors from 'cors';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import config from './config/environment';
+import corsOptions from './config/corsOptions';
 import { connectDB } from './config/database';
 import { initModels } from './models';
 import logger, { stream } from './config/logger';
@@ -34,10 +35,7 @@ const limiter = rateLimit({
 
 app.use(morgan('combined', { stream }));
 app.use(helmet());
-app.use(cors({
-  origin: config.CORS_ORIGIN,
-  credentials: true,
-}));
+app.use(cors(corsOptions));
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
