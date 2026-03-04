@@ -1432,8 +1432,9 @@ const swaggerSpec = {
 };
 
 export const setupSwagger = (app: Express): void => {
-  const enableSwagger = config.NODE_ENV === 'development' &&
-                       process.env.ENABLE_SWAGGER_DOCS !== 'false';
+  // Habilita Swagger se estiver em development OU se ENABLE_SWAGGER_DOCS=true
+  const enableSwagger = config.NODE_ENV === 'development' || 
+                       process.env.ENABLE_SWAGGER_DOCS === 'true';
 
   if (!enableSwagger) {
     app.get('/api-docs/swagger.json', (req, res) => {
