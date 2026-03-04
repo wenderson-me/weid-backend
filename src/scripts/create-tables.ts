@@ -20,9 +20,8 @@ async function createTables() {
     const sequelize = getSequelize();
     await sequelize.sync({ force: false, alter: false });
 
-    console.log('✅ Tabelas criadas/sincronizadas com sucesso!');
+    console.log('Tabelas criadas/sincronizadas com sucesso!');
 
-    // Listar todas as tabelas criadas
     const [tables] = await sequelize.query(`
       SELECT table_name
       FROM information_schema.tables
@@ -38,7 +37,7 @@ async function createTables() {
     await sequelize.close();
     process.exit(0);
   } catch (error) {
-    console.error('❌ Erro ao criar tabelas:', (error as Error).message);
+    console.error('Erro ao criar tabelas:', (error as Error).message);
     console.error(error);
     process.exit(1);
   }

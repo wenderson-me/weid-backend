@@ -44,7 +44,7 @@ async function testConnection() {
 
     console.log('\n Teste finalizado');
   } catch (error) {
-    console.error('❌ Erro:', error.message);
+    console.error('Erro:', error.message);
     process.exit(1);
   } finally {
     await client.end();

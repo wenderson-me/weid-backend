@@ -3,13 +3,8 @@ import userService from '../services/user.service';
 import {
   successResponse,
   createdResponse,
-  notFoundResponse
 } from '../utils/responseHandler';
-import { MESSAGES } from '../utils/constants';
 
-/**
- * Controlador de usuários
- */
 class UserController {
   /**
    * Cria um novo usuário
@@ -30,7 +25,7 @@ class UserController {
    */
   public async updateUser(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
     try {
-      const user = await userService.updateUser(req.params.id, req.body);
+      const user = await userService.updateUser(req.params.id, req.body, req.user?.role);
       return successResponse(res, user, 'Usuário atualizado com sucesso');
     } catch (error) {
       next(error);
@@ -84,6 +79,20 @@ class UserController {
     try {
       const user = await userService.activateUser(req.params.id);
       return successResponse(res, user, 'Usuário reativado com sucesso');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Altera o papel (role) de um usuário
+   * @route PATCH /api/v1/users/:id/role
+   */
+  public async changeUserRole(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+    try {
+      const { role } = req.body;
+      const user = await userService.changeUserRole(req.params.id, role);
+      return successResponse(res, user, 'Papel do usuário alterado com sucesso');
     } catch (error) {
       next(error);
     }

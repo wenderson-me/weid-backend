@@ -1,0 +1,16 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+RUN npm install -g nodemon ts-node
+
+COPY package*.json ./
+COPY tsconfig.json ./
+
+RUN npm install
+
+COPY src ./src
+
+EXPOSE 5000
+
+CMD ["nodemon", "--exec", "ts-node", "src/app.ts"]

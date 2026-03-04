@@ -30,9 +30,10 @@ class UserService {
    * Atualiza um usuário existente
    * @param userId ID do usuário
    * @param userData Dados para atualização
+   * @param requestingUserRole Role do usuário que está fazendo a requisição
    * @returns Usuário atualizado
    */
-  public async updateUser(userId: string, userData: UpdateUserInput): Promise<UserResponse> {
+  public async updateUser(userId: string, userData: UpdateUserInput, requestingUserRole?: string): Promise<UserResponse> {
     const user = await User.findByPk(userId);
 
     if (!user) {
@@ -47,7 +48,14 @@ class UserService {
       }
     }
 
-    Object.assign(user, userData);
+    const { password: _password, ...updateData } = userData as any;
+
+    if (requestingUserRole !== 'admin') {
+      delete updateData.role;
+      delete updateData.isActive;
+    }
+
+    Object.assign(user, updateData);
     await user.save();
 
     await Activity.create({
@@ -92,6 +100,36 @@ class UserService {
 
     await user.destroy();
     return true;
+  }
+
+  /**
+   * Altera o papel (role) de um usuário
+   * @param userId ID do usuário
+   * @param newRole Novo papel do usuário
+   * @returns Usuário atualizado
+   */
+  public async changeUserRole(userId: string, newRole: 'user' | 'admin' | 'manager'): Promise<UserResponse> {
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      throw new AppError(MESSAGES.NOT_FOUND.USER, 404);
+    }
+
+    user.role = newRole;
+    await user.save();
+
+    await Activity.create({
+      type: ACTIVITY_TYPES.PROFILE_UPDATED,
+      userId: userId,
+      targetUserId: userId,
+      description: `Papel do usuário alterado para ${newRole}`,
+      metadata: {
+        oldRole: user.role,
+        newRole: newRole
+      }
+    });
+
+    return sanitizeUser(user);
   }
 
   /**

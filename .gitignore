@@ -3,19 +3,18 @@ node_modules
 /.pnp
 .pnp.js
 
-# Environment variables - NUNCA COMMITAR CREDENCIAIS!
+# Environment variables - NEVER COMMIT CREDENTIALS!
 .env
 .env.*
 !.env.example
-.sql
+*.sql
 
 # Build directories
 /build
 /dist
-/backend/dist
 
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -26,9 +25,6 @@ lerna-debug.log*
 # Testing
 /coverage
 /.nyc_output
-
-# Production
-/build
 
 # Editor directories and files
 .vscode/*
@@ -46,7 +42,6 @@ lerna-debug.log*
 .temp
 
 # Uploads
-/backend/uploads
 /uploads
 
 # Cache
@@ -54,41 +49,19 @@ lerna-debug.log*
 .cache
 .parcel-cache
 
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Optional stylelint cache
-.stylelintcache
-
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Documentação (mantida em pasta separada)
-*.md
-!README.md
-
-# Arquivos informativos locais
-REPOSITORIO-INFO.txt
-ESTRUTURA-ARQUIVOS.txt
-
-# Configurações específicas do servidor
-ecosystem.config.js
-deploy.sh
-health-check.sh
-nginx.conf.example
-backup-db.sh
-mover-arquivos-docs.bat
-mover-arquivos-docs.sh
-
 # PM2
 .pm2/
 pids/
 *.pid
 *.seed
 *.pid.lock
+
+# Sensitive files
+*.pem
+*.key
+*.crt
+.secrets
+
+# Backup files
+.env.backup-*
+*.bak

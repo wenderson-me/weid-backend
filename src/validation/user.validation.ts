@@ -104,3 +104,12 @@ export const avatarUploadSchema = Joi.object({
     'any.required': 'Avatar é obrigatório',
   }),
 });
+
+export const changeRoleSchema = Joi.object({
+  role: Joi.string().valid('user', 'admin', 'manager').required().messages({
+    'string.base': 'Papel deve ser um texto',
+    'string.empty': 'Papel é obrigatório',
+    'any.only': 'Papel deve ser: user, admin ou manager',
+    'any.required': 'Papel é obrigatório',
+  }),
+});

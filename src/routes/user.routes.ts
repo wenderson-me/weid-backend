@@ -10,7 +10,8 @@ import {
   deleteUserSchema,
   queryUsersSchema,
   updatePreferencesSchema,
-  avatarUploadSchema
+  avatarUploadSchema,
+  changeRoleSchema
 } from '../validation/user.validation';
 
 const router = Router();
@@ -90,6 +91,15 @@ router.patch(
   authorize(USER_ROLES.ADMIN, USER_ROLES.MANAGER),
   validate(getUserSchema, 'params'),
   userController.activateUser
+);
+
+router.patch(
+  '/:id/role',
+  authenticate,
+  authorize(USER_ROLES.ADMIN),
+  validate(getUserSchema, 'params'),
+  validate(changeRoleSchema),
+  userController.changeUserRole
 );
 
 router.get(

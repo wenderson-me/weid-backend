@@ -15,7 +15,12 @@ export const generateAccessToken = (user: User): string => {
       email: user.email,
       role: user.role,
     },
-    config.JWT_SECRET
+    config.JWT_SECRET,
+    {
+      expiresIn: config.JWT_ACCESS_EXPIRATION as any,
+      algorithm: 'HS256' as const,
+      noTimestamp: false
+    }
   );
 };
 
@@ -29,7 +34,12 @@ export const generateRefreshToken = (user: User): string => {
     {
       id: user.id,
     },
-    config.JWT_SECRET
+    config.JWT_SECRET,
+    {
+      expiresIn: config.JWT_REFRESH_EXPIRATION as any,
+      algorithm: 'HS256' as const,
+      noTimestamp: false
+    }
   );
 };
 
@@ -56,7 +66,9 @@ export const generateTokens = (user: User): UserTokens => {
  */
 export const verifyToken = (token: string): jwt.JwtPayload | null => {
   try {
-    return jwt.verify(token, config.JWT_SECRET) as jwt.JwtPayload;
+    return jwt.verify(token, config.JWT_SECRET, {
+      algorithms: ['HS256']
+    }) as jwt.JwtPayload;
   } catch (error) {
     return null;
   }
@@ -74,5 +86,9 @@ export const generatePasswordResetToken = (user: User): string => {
       version: user.password.substring(0, 10),
     },
     config.JWT_SECRET,
+    {
+      algorithm: 'HS256' as const,
+      expiresIn: config.JWT_RESET_PASSWORD_EXPIRATION as any,
+    }
   );
 };

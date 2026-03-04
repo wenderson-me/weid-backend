@@ -204,7 +204,6 @@ const components = {
       },
       required: ['total', 'byStatus', 'byPriority', 'completed', 'overdue', 'withoutAssignee'],
     },
-    // Adicionar schema para Nota
     Note: {
       type: 'object',
       properties: {
@@ -231,7 +230,6 @@ const components = {
       },
       required: ['_id', 'title', 'content', 'category', 'isPinned', 'owner', 'createdBy', 'createdAt', 'updatedAt'],
     },
-    // Adicionar schema para estatísticas de notas
     NoteStatistics: {
       type: 'object',
       properties: {
@@ -329,7 +327,6 @@ const components = {
   }
 };
 
-// Definição manual das rotas para documentação
 const paths = {
   '/auth/register': {
     post: {
@@ -514,7 +511,6 @@ const paths = {
       }
     }
   },
-  // Rotas para usuários
   '/users': {
     get: {
       tags: ['Users'],
@@ -770,7 +766,7 @@ const paths = {
     }
   },
 
-  // Rotas para tarefas
+
   '/tasks': {
     get: {
       tags: ['Tasks'],
@@ -995,7 +991,6 @@ const paths = {
     }
   },
 
-  // Rotas para notas
   '/notes': {
     get: {
       tags: ['Notes'],
@@ -1384,7 +1379,6 @@ const paths = {
   },
 };
 
-// Especificação OpenAPI completa
 const swaggerSpec = {
   openapi: '3.0.0',
   info: {
@@ -1437,9 +1431,26 @@ const swaggerSpec = {
   ],
 };
 
-// Função para configurar o Swagger na aplicação
 export const setupSwagger = (app: Express): void => {
-  // Servir o JSON da especificação sem cache
+  const enableSwagger = config.NODE_ENV === 'development' &&
+                       process.env.ENABLE_SWAGGER_DOCS !== 'false';
+
+  if (!enableSwagger) {
+    app.get('/api-docs/swagger.json', (req, res) => {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Not found',
+      });
+    });
+    app.get('/api-docs', (req, res) => {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Not found',
+      });
+    });
+    return;
+  }
+
   app.get('/api-docs/swagger.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -1448,7 +1459,6 @@ export const setupSwagger = (app: Express): void => {
     res.send(swaggerSpec);
   });
 
-  // Servir a interface do Swagger UI
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     explorer: true,
     customCss: '.swagger-ui .topbar { display: none }',

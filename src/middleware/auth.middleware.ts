@@ -13,7 +13,7 @@ declare global {
 }
 
 /**
- * Middleware de autenticação que verifica se o usuário está autenticado
+ * Middleware de autenticação
  */
 export const authenticate = async (
   req: Request,
@@ -24,7 +24,10 @@ export const authenticate = async (
     const authHeader = req.headers.authorization;
     let token: string | undefined;
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    if (req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    }
+    else if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.split(' ')[1];
     }
 
@@ -34,7 +37,45 @@ export const authenticate = async (
       );
     }
 
-    const decoded = jwt.verify(token, config.JWT_SECRET) as jwt.JwtPayload;
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return next(
+        new AppError('Token inválido', 401)
+      );
+    }
+
+    try {
+      const header = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+      if (header.alg && header.alg !== 'HS256') {
+        console.warn(`[Auth] JWT com algoritmo não permitido: ${header.alg}`);
+        return next(
+          new AppError('Algoritmo JWT não suportado', 401)
+        );
+      }
+      if (!header.alg) {
+        console.warn(`[Auth] JWT sem algoritmo especificado`);
+        return next(
+          new AppError('JWT inválido: sem algoritmo', 401)
+        );
+      }
+    } catch (e) {
+      console.warn(`[Auth] Erro ao decodificar header JWT:`, e);
+      return next(
+        new AppError('Token malformado', 401)
+      );
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, config.JWT_SECRET, {
+        algorithms: ['HS256']
+      }) as jwt.JwtPayload;
+    } catch (jwtError: any) {
+      console.warn(`[Auth] Erro ao verificar JWT:`, jwtError.message);
+      return next(
+        new AppError('Token inválido ou expirado', 401)
+      );
+    }
 
     const currentUser = await User.findByPk(decoded.id, {
       attributes: { include: ['passwordChangedAt'] }
@@ -66,7 +107,8 @@ export const authenticate = async (
 };
 
 /**
- * Middleware que restringe o acesso a determinadas funções com base no papel do usuário
+ * Middleware que restringe o acesso a endpoints administrativos
+ * @param roles Lista de papéis permitidos (ex: ['admin'])
  */
 export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {

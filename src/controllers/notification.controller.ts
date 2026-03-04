@@ -2,12 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import notificationService from '../services/notification.service';
 import {
   successResponse,
-  notFoundResponse
 } from '../utils/responseHandler';
 
-/**
- * Controlador de notificações
- */
 class NotificationController {
   /**
    * Busca notificações do usuário

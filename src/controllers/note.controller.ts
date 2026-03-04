@@ -3,12 +3,8 @@ import noteService from '../services/note.service';
 import {
   successResponse,
   createdResponse,
-  notFoundResponse
 } from '../utils/responseHandler';
 
-/**
- * Controlador de notas
- */
 class NoteController {
   /**
    * Cria uma nova nota

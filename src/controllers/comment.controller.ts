@@ -3,13 +3,8 @@ import commentService from '../services/comment.service';
 import {
   successResponse,
   createdResponse,
-  notFoundResponse
 } from '../utils/responseHandler';
-import { MESSAGES } from '../utils/constants';
 
-/**
- * Controlador de comentários
- */
 class CommentController {
   /**
    * Cria um novo comentário

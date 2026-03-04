@@ -5,6 +5,7 @@ import Task, { initTaskModel } from './task.model';
 import Note, { initNoteModel } from './note.model';
 import Comment, { initCommentModel } from './comment.model';
 import Activity, { initActivityModel } from './activity.model';
+import Transaction, { initTransactionModel } from './transaction.model';
 
 let initialized = false;
 
@@ -20,12 +21,13 @@ export const initModels = async () => {
   initNoteModel();
   initCommentModel();
   initActivityModel();
+  initTransactionModel();
 
   setupAssociations();
 
   if (process.env.NODE_ENV === 'development') {
     await sequelize.sync({ alter: false });
-    console.log('✅ Modelos sincronizados com PostgreSQL');
+    console.log('Sincronizados com PostgreSQL');
   }
 
   initialized = true;

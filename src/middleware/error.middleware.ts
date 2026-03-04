@@ -87,7 +87,7 @@ export const errorMiddleware = (
   const statusCode = (err as any).statusCode || 500;
   const message = err.message || 'Algo deu errado';
 
-  if (config.NODE_ENV ) {
+  if (config.NODE_ENV === 'development') {
     return res.status(statusCode).json({
       status: 'error',
       message,

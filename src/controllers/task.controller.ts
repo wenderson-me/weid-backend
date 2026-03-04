@@ -4,11 +4,7 @@ import {
   successResponse,
   createdResponse,
 } from '../utils/responseHandler';
-import User from '@/models/user.model';
 
-/**
- * Controlador de tarefas
- */
 class TaskController {
   /**
    * Cria uma nova tarefa

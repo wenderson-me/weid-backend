@@ -3,13 +3,9 @@ import activityService from '../services/activity.service';
 import {
   successResponse,
   createdResponse,
-  notFoundResponse
 } from '../utils/responseHandler';
-import { MESSAGES } from '../utils/constants';
 
-/**
- * Controlador de atividades
- */
+
 class ActivityController {
   /**
    * Cria uma nova atividade

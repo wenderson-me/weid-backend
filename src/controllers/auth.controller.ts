@@ -7,9 +7,32 @@ import {
 } from '../utils/responseHandler';
 import { MESSAGES } from '../utils/constants';
 
-/**
- * Controlador de autenticação
- */
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax' as const,
+  path: '/',
+};
+const ACCESS_TOKEN_EXPIRY  = 15 * 60 * 1000;
+const REFRESH_TOKEN_EXPIRY = 7  * 24 * 60 * 60 * 1000;
+
+function setAuthCookies(res: Response, tokens: { accessToken: string; refreshToken: string }) {
+  res.cookie('accessToken', tokens.accessToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: ACCESS_TOKEN_EXPIRY,
+  });
+  res.cookie('refreshToken', tokens.refreshToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: REFRESH_TOKEN_EXPIRY,
+    path: '/api/v1/auth/refresh-token',
+  });
+}
+
+function clearAuthCookies(res: Response) {
+  res.clearCookie('accessToken',  { ...COOKIE_OPTIONS });
+  res.clearCookie('refreshToken', { ...COOKIE_OPTIONS, path: '/api/v1/auth/refresh-token' });
+}
+
 class AuthController {
   /**
    * Registra um novo usuário
@@ -18,7 +41,8 @@ class AuthController {
   public async register(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
     try {
       const result = await authService.register(req.body);
-      return createdResponse(res, result, 'Usuário registrado com sucesso');
+      setAuthCookies(res, result.tokens);
+      return createdResponse(res, { user: result.user }, 'Usuário registrado com sucesso');
     } catch (error) {
       next(error);
     }
@@ -31,7 +55,8 @@ class AuthController {
   public async login(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
     try {
       const result = await authService.login(req.body);
-      return successResponse(res, result, MESSAGES.AUTH.LOGIN_SUCCESS);
+      setAuthCookies(res, result.tokens);
+      return successResponse(res, { user: result.user }, MESSAGES.AUTH.LOGIN_SUCCESS);
     } catch (error) {
       next(error);
     }
@@ -43,9 +68,13 @@ class AuthController {
    */
   public async refreshToken(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
     try {
-      const { refreshToken } = req.body;
+      const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+      if (!refreshToken) {
+        return errorResponse(res, 'Refresh token não fornecido', 401);
+      }
       const result = await authService.refreshToken(refreshToken);
-      return successResponse(res, result, 'Token atualizado com sucesso');
+      setAuthCookies(res, result);
+      return successResponse(res, null, 'Token atualizado com sucesso');
     } catch (error) {
       next(error);
     }
@@ -120,6 +149,7 @@ class AuthController {
   public async logout(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
     try {
       await authService.logout(req.user.id);
+      clearAuthCookies(res);
       return successResponse(res, null, MESSAGES.AUTH.LOGOUT_SUCCESS);
     } catch (error) {
       next(error);

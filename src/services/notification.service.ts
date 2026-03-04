@@ -249,11 +249,7 @@ class NotificationService {
    * Marca notificação como lida
    */
   async markAsRead(notificationId: string, userId: string): Promise<{ success: boolean }> {
-    // não tem um campo "isRead"
-    // criar uma tabela separada para controlar o estado de leitura
-
     return { success: true };
-
   }
 
   /**

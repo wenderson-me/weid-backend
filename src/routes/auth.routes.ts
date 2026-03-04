@@ -1,4 +1,4 @@
-import { Router } from 'express';
+ import { Router } from 'express';
 import authController from '../controllers/auth.controller';
 import { validate } from '../middleware/validation.middleware';
 import { authenticate } from '../middleware/auth.middleware';
@@ -6,7 +6,6 @@ import { authLimiter } from '../middleware/rateLimiter.middleware';
 import {
   registerSchema,
   loginSchema,
-  refreshTokenSchema,
   changePasswordSchema,
   forgotPasswordSchema,
   resetPasswordSchema
@@ -14,9 +13,11 @@ import {
 
 const router = Router();
 
-router.post('/register', authLimiter, validate(registerSchema), authController.register);
+router.post('/register', authLimiter, (_req, res) => {
+  res.status(403).json({ status: 'error', message: 'O registo público está desativado. Contacte um administrador.' });
+});
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
-router.post('/refresh-token', validate(refreshTokenSchema), authController.refreshToken);
+router.post('/refresh-token', authController.refreshToken);
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
 router.post('/reset-password', authLimiter, validate(resetPasswordSchema), authController.resetPassword);
 

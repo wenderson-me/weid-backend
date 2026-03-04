@@ -22,6 +22,8 @@ interface EnvironmentConfig {
   LOG_FILE: string;
   RATE_LIMIT_WINDOW_MS: number;
   RATE_LIMIT_MAX: number;
+  GEMINI_API_KEY: string;
+
 }
 
 const config: EnvironmentConfig = {
@@ -38,11 +40,12 @@ const config: EnvironmentConfig = {
   JWT_ACCESS_EXPIRATION: process.env.JWT_ACCESS_EXPIRATION || '1h',
   JWT_REFRESH_EXPIRATION: process.env.JWT_REFRESH_EXPIRATION || '7d',
   JWT_RESET_PASSWORD_EXPIRATION: process.env.JWT_RESET_PASSWORD_EXPIRATION || '10m',
-  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3000,http://app.labws.cloud,https://app.labws.cloud',
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   LOG_FILE: process.env.LOG_FILE || 'logs/app.log',
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '15000', 10),
   RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
 };
 
 if (config.NODE_ENV === 'production') {

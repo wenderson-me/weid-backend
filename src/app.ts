@@ -3,7 +3,7 @@ import morgan from 'morgan';
 import helmet from 'helmet';
 import cors from 'cors';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 import config from './config/environment';
 import corsOptions from './config/corsOptions';
 import { connectDB } from './config/database';
@@ -11,6 +11,7 @@ import { initModels } from './models';
 import logger, { stream } from './config/logger';
 import { errorMiddleware } from './middleware/error.middleware';
 import { setupSwagger } from './config/swagger';
+import { defaultLimiter } from './middleware/rateLimiter.middleware';
 
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
@@ -19,27 +20,37 @@ import commentRoutes from './routes/comment.routes';
 import activityRoutes from './routes/activity.routes';
 import noteRoutes from './routes/note.routes';
 import notificationRoutes from './routes/notification.routes';
+import databaseRoutes from './routes/database.routes';
+import transactionRoutes from './routes/transaction.routes';
 
 const app = express();
 
-// Configurar trust proxy para aplicações atrás de proxy reverso (Nginx)
 app.set('trust proxy', 1);
 
-const limiter = rateLimit({
-  windowMs: config.RATE_LIMIT_WINDOW_MS,
-  max: config.RATE_LIMIT_MAX,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'Muitas requisições, por favor tente novamente mais tarde',
-});
-
 app.use(morgan('combined', { stream }));
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+    },
+  },
+  hsts: {
+    maxAge: 15552000,
+    includeSubDomains: true,
+    preload: true,
+  },
+  xContentTypeOptions: true,
+  xXssProtection: true,
+}));
 app.use(cors(corsOptions));
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(limiter);
+app.use(cookieParser());
+app.use(defaultLimiter);
 
 app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'Bem-vindo à API do Weid' });
@@ -54,6 +65,8 @@ app.use(`${apiPrefix}/comments`, commentRoutes);
 app.use(`${apiPrefix}/activities`, activityRoutes);
 app.use(`${apiPrefix}/notes`, noteRoutes);
 app.use(`${apiPrefix}/notifications`, notificationRoutes);
+app.use(`${apiPrefix}/database`, databaseRoutes);
+app.use(`${apiPrefix}/finance`, transactionRoutes);
 
 app.get(`${apiPrefix}/health`, (req: Request, res: Response) => {
   res.status(200).json({
@@ -94,7 +107,6 @@ const startServer = async () => {
   }
 };
 
-// Não iniciar servidor automaticamente em ambiente de teste
 if (config.NODE_ENV !== 'test') {
   startServer();
 }
